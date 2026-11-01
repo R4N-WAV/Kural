@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <new>
+#include <algorithm>
 
 // ---------------------------------------------------------------- allocation tracking
 // counted only on the thread that runs processBlock (JUCE's own timer/message threads may allocate
@@ -206,58 +207,63 @@ int main (int argc, char** argv)
                 juce::String::formatted ("automation every block: finite, no allocation, largest step %.3f", maxJump));
     }
 
-    // 4. bypass and 0 dB are bit-exact pass-through (latency is zero, nothing else touches the signal)
+    // 4. bypass, and harmonies off at 0 dB, give exactly the input delayed by the reported latency
     for (int mode = 0; mode < 2; ++mode)
     {
         KuralProcessor p;
-        p.prepareToPlay (48000.0, 512);
-        if (mode == 0) setParam (p, kural::ids::bypass, 1.0f); else setParam (p, kural::ids::output, 0.0f);
+        if (mode == 0) setParam (p, kural::ids::bypass, 1.0f); else setParam (p, kural::ids::harmonyOn, 0.0f);
         p.prepareToPlay (48000.0, 512);          // start settled (no crossfade in progress)
+        const int lat = p.getLatencySamples();
         Signal a { Signal::vocal, 48000.0 }, b { Signal::vocal, 48000.0 };
         std::vector<float> out;
         run (p, a, 1.0, 512, true, 2, 2, {}, &out);
-        bool exact = true;
-        for (size_t i = 0; i < out.size() && exact; ++i) exact = out[i] == b.next();
-        report (exact && p.getLatencySamples() == 0, mode == 0 ? "parameter bypass is bit-exact, latency 0"
-                                                                : "output 0 dB is bit-exact pass-through");
+        std::vector<float> in;
+        for (size_t i = 0; i < out.size(); ++i) in.push_back (b.next());
+        bool exact = lat > 0;
+        for (size_t i = 0; i < out.size() && exact; ++i) exact = out[i] == (i >= (size_t) lat ? in[i - (size_t) lat] : 0.0f);
+        report (exact, juce::String::formatted (mode == 0 ? "parameter bypass = input delayed by the reported latency (%d samples), bit-exact"
+                                                          : "harmonies off, dry 0 dB = input delayed by the latency (%d samples), bit-exact", lat));
     }
     {
-        // host bypass crossfades (20 ms) from the processed signal to the dry one, so it never clicks;
-        // once the fade has finished the output must be the input, bit for bit
+        // host bypass crossfades (20 ms) from the processed signal to the delayed dry one, so it never
+        // clicks; once the fade has finished the output must be the delayed input, bit for bit
         KuralProcessor p;
         setParam (p, kural::ids::output, -12.0f);
         p.prepareToPlay (48000.0, 512);
+        const int lat = p.getLatencySamples();
         juce::AudioBuffer<float> buf (2, 512);
         juce::MidiBuffer midi;
         Signal a { Signal::vocal, 48000.0 };
+        std::vector<float> in;
         bool exact = true;
         float firstBlockMaxJump = 0.0f, prev = 0.0f;
-        for (int blk = 0; blk < 8; ++blk)
+        for (int blk = 0; blk < 12; ++blk)
         {
-            for (int i = 0; i < 512; ++i) { const float v = a.next(); buf.setSample (0, i, v); buf.setSample (1, i, v); }
-            juce::AudioBuffer<float> ref (buf);
+            for (int i = 0; i < 512; ++i) { const float v = a.next(); in.push_back (v); buf.setSample (0, i, v); buf.setSample (1, i, v); }
             p.processBlockBypassed (buf, midi);
             for (int i = 0; i < 512; ++i)
             {
                 if (blk == 0) firstBlockMaxJump = juce::jmax (firstBlockMaxJump, std::abs (buf.getSample (0, i) - prev));
                 prev = buf.getSample (0, i);
-                if (blk >= 3) exact = exact && buf.getSample (0, i) == ref.getSample (0, i);   // 3 blocks = 32 ms > 20 ms fade
+                const size_t t = (size_t) (blk * 512 + i);
+                if (blk >= 3) exact = exact && buf.getSample (0, i) == in[t - (size_t) lat];   // 3 blocks = 32 ms > 20 ms fade
             }
         }
         report (exact && firstBlockMaxJump < 0.25f,
-                juce::String::formatted ("host bypass: crossfades without a jump (largest step %.3f), then bit-exact", firstBlockMaxJump));
+                juce::String::formatted ("host bypass: crossfades without a jump (largest step %.3f), then the delayed input bit-exact", firstBlockMaxJump));
     }
 
-    // 5. output gain does what it says (-6 dB → ×0.501)
+    // 5. output gain does what it says (-6 dB → ×0.501), harmonies off
     {
         KuralProcessor p;
         setParam (p, kural::ids::output, -6.0f);
+        setParam (p, kural::ids::harmonyOn, 0.0f);
         p.prepareToPlay (48000.0, 512);
-        juce::AudioBuffer<float> buf (2, 512);
+        juce::AudioBuffer<float> buf (2, 4096);
         juce::MidiBuffer midi;
-        for (int c = 0; c < 2; ++c) for (int i = 0; i < 512; ++i) buf.setSample (c, i, 0.5f);
+        for (int c = 0; c < 2; ++c) for (int i = 0; i < 4096; ++i) buf.setSample (c, i, 0.5f);
         p.processBlock (buf, midi);
-        const float g = buf.getSample (0, 511) / 0.5f;
+        const float g = buf.getSample (0, 4095) / 0.5f;
         report (std::abs (g - juce::Decibels::decibelsToGain (-6.0f)) < 1e-4f, juce::String::formatted ("output -6 dB measured as x%.4f", g));
     }
 
@@ -266,11 +272,48 @@ int main (int argc, char** argv)
         KuralProcessor p;
         setLayout (p, 1, 2);
         p.prepareToPlay (48000.0, 256);
+        juce::AudioBuffer<float> buf (2, 4096);
+        juce::MidiBuffer midi;
+        for (int i = 0; i < 4096; ++i) { buf.setSample (0, i, 0.3f); buf.setSample (1, i, 0.0f); }
+        p.processBlock (buf, midi);
+        report (std::abs (buf.getSample (1, 4095) - buf.getSample (0, 4095)) < 1e-6f && buf.getSample (1, 4095) != 0.0f,
+                "mono in, stereo out: both channels carry the voice");
+    }
+
+    // 6b. the harmony is the right note: a sung C4 with only voice 1 (third above) → E4 in C major,
+    //     Eb4 in C minor; dry off, so the output holds the harmony alone
+    for (int scale = 0; scale < 2; ++scale)
+    {
+        KuralProcessor p;
+        setParam (p, kural::ids::dryLevel, -60.0f);
+        setParam (p, kural::ids::scale, (float) scale);            // 0 Major, 1 Natural minor
+        setParam (p, kural::ids::voiceId (1, "on").toRawUTF8(), 0.0f);
+        p.prepareToPlay (48000.0, 256);
         juce::AudioBuffer<float> buf (2, 256);
         juce::MidiBuffer midi;
-        for (int i = 0; i < 256; ++i) { buf.setSample (0, i, 0.3f); buf.setSample (1, i, 0.0f); }
-        p.processBlock (buf, midi);
-        report (buf.getSample (1, 255) == buf.getSample (0, 255) && buf.getSample (1, 255) != 0.0f, "mono in, stereo out: both channels carry the voice");
+        std::vector<float> out;
+        double ph = 0.0;
+        for (int blk = 0; blk < 48000 * 2 / 256; ++blk)
+        {
+            for (int i = 0; i < 256; ++i)
+            {
+                ph += 2.0 * juce::MathConstants<double>::pi * 261.63 / 48000.0;
+                const float v = (float) (0.2 * (std::sin (ph) + 0.5 * std::sin (2 * ph) + 0.3 * std::sin (3 * ph)));
+                buf.setSample (0, i, v); buf.setSample (1, i, v);
+            }
+            p.processBlock (buf, midi);
+            for (int i = 0; i < 256; ++i) out.push_back (0.5f * (buf.getSample (0, i) + buf.getSample (1, i)));
+        }
+        kural::dsp::PitchDetector det;
+        det.prepare (48000.0);
+        std::vector<float> f0s;
+        det.process (out.data(), (int) out.size(), [&] (const kural::dsp::PitchFrame& f)
+                     { if (f.voicing == kural::dsp::Voicing::voiced && f.centreSample > 48000) f0s.push_back (f.f0Hz); });
+        std::sort (f0s.begin(), f0s.end());
+        const float med = f0s.empty() ? 0.0f : f0s[f0s.size() / 2];
+        const float expect = scale == 0 ? 329.63f : 311.13f;
+        report (! f0s.empty() && std::abs (1200.0f * std::log2 (med / expect)) < 10.0f,
+                juce::String::formatted ("sung C4, voice 1 third above in C %s: harmony at %.1f Hz (expected %.1f)", scale == 0 ? "major" : "minor", med, expect));
     }
 
     // 7. state: save → restore round trip, and an older/partial state falls back to defaults

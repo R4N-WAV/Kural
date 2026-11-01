@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(Kural VERSION 0.1.0 LANGUAGES C CXX)
+project(Kural VERSION 0.2.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,7 +19,8 @@ add_library(KuralDsp STATIC
     Source/DSP/PitchDetector.cpp
     Source/DSP/Harmony.cpp
     Source/DSP/Psola.cpp
-    Source/DSP/PhaseVocoder.cpp)
+    Source/DSP/PhaseVocoder.cpp
+    Source/DSP/HarmonyEngine.cpp)
 target_include_directories(KuralDsp PUBLIC Source)
 
 option(KURAL_BUILD_TESTS "Build the DSP unit tests" ON)

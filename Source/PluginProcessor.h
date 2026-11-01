@@ -2,14 +2,16 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <array>
 #include <atomic>
-#include "DSP/PitchDetector.h"
+#include "DSP/HarmonyEngine.h"
 #include "Params.h"
 
 // Kural audio processor.
 //
-// Current build (Phases 1–2): the dry vocal passes through with output gain and a click-free
-// bypass, while the shared pitch analyser tracks the incoming voice. The analysis results feed the
-// editor's pitch display through a lock-free FIFO; later phases feed them to the harmony engine.
+//   input ──► mono sum ──► HarmonyEngine (pitch analysis, harmony planning, PSOLA voices) ─┐
+//         └─► dry, delayed by the engine latency ──────────────────────────── × dry level ─┴─► output level ─► out
+//
+// The latency (2 periods of 65 Hz: 31 ms at 48 kHz) is constant and reported to the host, also with
+// harmonies off or bypassed, so tracks stay aligned and hosts never see the latency change.
 //
 // Threading: processBlock never allocates, locks, or touches files/UI. prepareToPlay does all
 // allocation. The editor only reads atomics and pops from the FIFO (single producer/single consumer).
@@ -49,11 +51,14 @@ public:
     juce::AudioProcessorValueTreeState apvts;
 
     // ---- analysis feed for the editor (audio thread writes, message thread reads)
+    static constexpr int displayVoices = kural::dsp::HarmonyEngine::maxVoices;
     struct AnalysisFrame
     {
         double timeSec = 0.0;     // position of the frame centre, seconds since playback was prepared
         float f0Hz = 0.0f, confidence = 0.0f, rmsDb = -120.0f;
         kural::dsp::Voicing voicing = kural::dsp::Voicing::silence;
+        std::uint16_t activeVoices = 0;                 // bit v = voice v sounding
+        std::array<float, displayVoices> shift {};      // semitones each voice is shifted by (what is applied)
     };
     int popAnalysis (AnalysisFrame* dest, int maxFrames);     // message thread
     double currentSampleRate() const { return fs; }
@@ -64,16 +69,25 @@ private:
     void process (juce::AudioBuffer<float>&, bool bypassedByHost);
     void processChunk (juce::AudioBuffer<float>&, int start, int n, bool bypassedByHost);
     void pushFrame (const kural::dsp::PitchFrame&) noexcept;
+    void readParameters() noexcept;
 
     double fs = 48000.0;
-    int maxBlock = 512;
-    kural::dsp::PitchDetector pitch;
-    std::vector<float> mono;
-    juce::SmoothedValue<float> outGain, wetMix;   // wetMix: 1 = processed, 0 = bypassed (crossfade)
+    int maxBlock = 512, latency = 0;
+    kural::dsp::HarmonyEngine engine;
+    std::vector<float> mono, harmL, harmR;
+    std::array<std::vector<float>, 2> dryRing;
+    int dryMask = 0, dryPos = 0;
+    juce::SmoothedValue<float> outGain, wetMix, dryGain;   // wetMix: 1 = processed, 0 = bypassed (crossfade)
+
+    // cached parameter pointers (no lookups on the audio thread)
+    std::atomic<float> *pOutput = nullptr, *pBypass = nullptr, *pKey = nullptr, *pScale = nullptr, *pHarmOn = nullptr,
+                       *pHarmLevel = nullptr, *pDryLevel = nullptr, *pConsonants = nullptr, *pGlide = nullptr;
+    struct VoicePtrs { std::atomic<float> *on, *mode, *interval, *semis, *octave, *cents, *formant, *level, *pan; };
+    std::array<VoicePtrs, kural::registeredVoices> pVoice {};
 
     static constexpr int fifoSize = 2048;
     juce::AbstractFifo fifo { fifoSize };
-    std::array<AnalysisFrame, fifoSize> fifoData {};
+    std::vector<AnalysisFrame> fifoData = std::vector<AnalysisFrame> ((size_t) fifoSize);
     std::atomic<double> clockSec { 0.0 };
     float inPeak = 0.0f, outPeak = 0.0f;
     int peakCount = 0;
