@@ -65,8 +65,14 @@ def download(work, key):
     return zipfile.ZipFile(path)
 
 
+def names_of(z):
+    """archive members without folders and macOS metadata (__MACOSX/, ._ files)"""
+    return [n for n in z.namelist()
+            if not n.endswith('/') and '__MACOSX' not in n and not os.path.basename(n).startswith('._')]
+
+
 def survey(z, key, depth=4):
-    names = [n for n in z.namelist() if not n.endswith('/')]
+    names = names_of(z)
     print(f'\n===== {key}: {len(names)} files')
     ext = Counter(os.path.splitext(n)[1].lower() for n in names)
     print('extensions:', dict(ext))
@@ -120,7 +126,7 @@ def read_f0_csv(z, member):
 
 # ---------------------------------------------------------------- selections
 def select_vocadito(z, out, manifest):
-    names = z.namelist()
+    names = names_of(z)
     audio = sorted(n for n in names if re.search(r'Audio/.*\.wav$', n, re.I))
     f0s = {os.path.basename(n).split('_f0')[0]: n for n in names if re.search(r'F0/.*\.csv$', n, re.I)}
     print(f'vocadito: {len(audio)} audio, {len(f0s)} f0 files')
@@ -129,7 +135,7 @@ def select_vocadito(z, out, manifest):
         ref = f0s.get(stem)
         if ref is None:
             continue
-        tid = f'vocadito_{stem}'
+        tid = stem if stem.startswith('vocadito') else f'vocadito_{stem}'
         sr, dur = to_flac(z, a, os.path.join(out, 'audio', tid + '.flac'), MAX_SECONDS)
         write_f0(read_f0_csv(z, ref), os.path.join(out, 'f0', tid + '.csv'), dur)
         manifest.append(dict(id=tid, dataset='vocadito', singer=stem, voice='', technique='solo song',
@@ -138,7 +144,7 @@ def select_vocadito(z, out, manifest):
 
 
 def select_dcs(z, out, manifest, max_tracks=24):
-    names = z.namelist()
+    names = names_of(z)
     manual = [n for n in names if re.search(r'manual', n, re.I) and n.lower().endswith('.csv') and 'lrx' in n.lower()]
     wavs = [n for n in names if n.lower().endswith('.wav')]
     print(f'dcs: {len(manual)} manual LRX f0 files, {len(wavs)} wav files')
@@ -181,7 +187,7 @@ VS_CONTEXT_ORDER = ['excerpts', 'arpeggios', 'long_tones', 'scales']
 
 
 def select_vocalset(z, out, manifest):
-    wavs = [n for n in z.namelist() if n.lower().endswith('.wav') and '__macosx' not in n.lower()]
+    wavs = [n for n in names_of(z) if n.lower().endswith('.wav')]
     # path like .../FULL/<singer>/<context>/<technique>/<file>.wav
     by = defaultdict(list)
     for w in wavs:
@@ -234,12 +240,19 @@ def main():
     os.makedirs(os.path.join(out, 'audio'), exist_ok=True)
     os.makedirs(os.path.join(out, 'f0'), exist_ok=True)
     manifest = []
-    for key, sel in (('vocadito', select_vocadito), ('dcs', select_dcs), ('vocalset', select_vocalset)):
-        z = download(work, key)
+    zips = {key: download(work, key) for key in DATASETS}
+    for key, z in zips.items():
         survey(z, key)
-        if not only_survey:
+    failed = []
+    if not only_survey:
+        for key, sel in (('vocadito', select_vocadito), ('dcs', select_dcs), ('vocalset', select_vocalset)):
             n0 = len(manifest)
-            sel(z, out, manifest)
+            try:
+                sel(zips[key], out, manifest)
+            except Exception as e:          # report and carry on with the other datasets
+                import traceback
+                traceback.print_exc()
+                failed.append(key)
             print(f'{key}: selected {len(manifest) - n0} tracks', flush=True)
     if not only_survey:
         if not manifest:
@@ -248,6 +261,8 @@ def main():
         total = sum(os.path.getsize(os.path.join(dp, f)) for dp, _, fs in os.walk(out) for f in fs)
         print(f'\nTOTAL: {len(manifest)} tracks, {total / 1e6:.1f} MB')
         print(Counter(m['dataset'] for m in manifest))
+        if failed:
+            print('SELECTION FAILED FOR:', ', '.join(failed))
 
 
 if __name__ == '__main__':
