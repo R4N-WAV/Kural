@@ -87,6 +87,7 @@ struct PsolaVoiceSettings
     float formantSemis = 0.0f;     // formant shift; 0 = preserved
     float unvoicedGain = 0.3f;     // level of consonants/breaths in this voice (0…1)
     float glideMs = 30.0f;         // glide time for changes of `semitones`
+    bool blendGrains = true;       // blend the two periods around each synthesis point (see Psola.cpp)
 };
 
 class PsolaVoice

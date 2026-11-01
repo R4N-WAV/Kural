@@ -137,7 +137,9 @@ int main (int argc, char** argv)
             PitchDetector det; det.prepare (fs);
             PitchMarker mk; mk.prepare (fs);
             PsolaVoice v; v.prepare (mk);
-            v.set ({ semis, formant, unv, 0.0f });
+            PsolaVoiceSettings vs { semis, formant, unv, 0.0f };
+            if (const char* e = std::getenv ("KURAL_PSOLA_BLEND")) vs.blendGrains = std::atoi (e) != 0;   // A/B hook
+            v.set (vs);
             v.reset (mk);
             latency = mk.latency();
             for (size_t i = 0; i < in.mono.size(); ++i)

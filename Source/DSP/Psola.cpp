@@ -267,7 +267,21 @@ float PsolaVoice::next (const PitchMarker& m) noexcept
         const bool voiced = a.voiced || (hasNext && nx.voiced);
         voicedMix += ((voiced ? 1.0f : 0.0f) - voicedMix) * 0.75f;
         const float ratio = voiced ? std::exp2 (semis / 12.0f) : 1.0f;
-        if (voicedMix > 0.001f) addGrain (acc, m, a, ts, voiced ? formant : 1.0f, voicedMix);
+        if (voicedMix > 0.001f)
+        {
+            // Blend the two periods around the synthesis point by where it sits between their marks.
+            // Snapping to one mark repeats (shifting up) or drops (down) whole periods at a rate of
+            // |f_out − f_in|; as consecutive periods of a real voice differ, that stutter leaves a
+            // ghost of the original pitch in the harmony (buzzy, robotic). Marks are aligned to the
+            // same point of every period, so the blend is coherent.
+            float alpha = 0.0f;
+            if (settings.blendGrains && voiced && hasNext && nx.voiced && nx.pos > a.pos
+                && (double) nx.pos + (double) std::clamp (nx.period, 8.0f, m.maxPeriod()) <= (double) m.now())
+                alpha = (float) std::clamp ((ts - (double) a.pos) / (double) (nx.pos - a.pos), 0.0, 1.0);
+            const float f = voiced ? formant : 1.0f;
+            if (alpha < 0.999f) addGrain (acc, m, a, ts, f, voicedMix * (1.0f - alpha));
+            if (alpha > 0.001f) addGrain (acc, m, nx, ts, f, voicedMix * alpha);
+        }
         if (voicedMix < 0.999f) addGrain (accU, m, a, ts, 1.0f, (1.0f - voicedMix) * settings.unvoicedGain);
         // advance by the period that follows this mark (the distance to the next mark) when it is known:
         // using the period before it lets the synthesis drift against the marks under vibrato, which now

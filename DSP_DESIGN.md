@@ -177,6 +177,14 @@ little here. −12 st is under-counted for every shifter: the bass voices land b
   the period after it is periodic too, and the marker probes the recently heard period itself while
   the detector (≈20 ms late) still says unvoiced. On pitch: 89.5 % → 91.4 % over the 12 singers.
 
+**Third fix, after the owner's listening test ("PSOLA sounds best, but some parts sound robotic"):**
+snapping each synthesis grain to one mark repeats (up) or drops (down) whole periods at a rate of
+|f_out − f_in|, which leaves a *ghost of the original pitch* in the harmony. New measure in
+`eval_shift.py` (energy at the input's harmonics relative to the output's, 8 real singers):
+PSOLA −31.9 dB before (phase vocoder −36.3, ATELIER −34.0). Grains are now blended from the two
+periods around each synthesis point: −36.4 dB overall, +12 st −34.0 → −48.3 dB, +4 st −33.8 → −36.7;
+−5 st unchanged (−28.4 dB) — downward shifts still need work.
+
 **Choice:** TD-PSOLA for the plugin — best formant preservation, exact level, lowest latency of the
 formant-preserving candidates, lowest CPU per voice of the two. The phase vocoder is kept in the code
 for further comparison but not used. The listening test is the final judge (VALIDATION.md).

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compares pitch-shifting algorithms on real vocals (test-vocals branch) with objective measures.
 
-usage: eval_shift.py <test-vocals dir> <KuralLab binary> <work dir> [report.md] [--tracks id,id,...]
+usage: eval_shift.py <test-vocals dir> <KuralLab binary> <work dir> [report.md] [--tracks=id,..] [--algos=psola,..] [--shifts=4,-5,..] [--tag=x]
 
 For each track × algorithm × interval, with formants preserved (formant shift 0):
   on pitch      share of input-voiced frames whose output pitch is within 50 cents of input × ratio
@@ -10,6 +10,8 @@ For each track × algorithm × interval, with formants preserved (formant shift 
                 where the input envelope is within 40 dB of its peak (cepstral envelopes, liftered below
                 both pitch periods; level difference removed).
                 Small = formants kept in place; a plain resampling shifter moves them with the pitch.
+  ghost of lead energy left at the original pitch's harmonics relative to the new pitch's harmonics
+                (dB, median): period repetition puts it there and it sounds buzzy/robotic; lower = cleaner
   periodicity   output periodicity (detector confidence) relative to the input's: below 1 means
                 roughness, phasiness or doubled pulses the input did not have
   level         output RMS vs input RMS on voiced frames (dB)
@@ -54,6 +56,38 @@ def envelope_db(seg, sr, period_samples):
     return 20 / np.log(10) * env
 
 
+def inharmonic_db(seg, sr, f0):
+    """energy between the harmonics of f0 relative to energy on them (dB), 80 Hz - 3 kHz.
+    Higher = rougher: sidebands, buzz or noise that the harmonics do not account for."""
+    n = len(seg)
+    p = np.abs(np.fft.rfft(seg * np.hanning(n))) ** 2
+    f = np.fft.rfftfreq(n, 1 / sr)
+    band = (f >= 80) & (f <= 3000)
+    k = np.round(f / f0)
+    on = band & (k >= 1) & (np.abs(f - k * f0) <= 0.2 * f0)
+    off = band & ~on
+    return 10 * np.log10((p[off].sum() + 1e-20) / (p[on].sum() + 1e-20))
+
+
+def ghost_db(seg, sr, f_in, f_out):
+    """'ghost' of the original pitch in a shifted voice: energy at the input's harmonics (where they
+    are not close to an output harmonic) relative to energy at the output's harmonics, 80 Hz - 3 kHz
+    (dB). Period repetition / dropping in PSOLA modulates at |f_out - f_in| and puts energy exactly
+    there; heard as a buzzy, robotic edge. Lower is cleaner."""
+    n = len(seg)
+    p = np.abs(np.fft.rfft(seg * np.hanning(n))) ** 2
+    f = np.fft.rfftfreq(n, 1 / sr)
+    band = (f >= 80) & (f <= 3000)
+    ko = np.round(f / f_out)
+    on_out = band & (ko >= 1) & (np.abs(f - ko * f_out) <= 0.06 * f_out)
+    ki = np.round(f / f_in)
+    near_out = np.abs(f - ko * f_out) <= 0.25 * f_out
+    on_in = band & (ki >= 1) & (np.abs(f - ki * f_in) <= 0.06 * f_in) & ~near_out
+    if not on_in.any():
+        return None
+    return 10 * np.log10((p[on_in].mean() + 1e-20) / (p[on_out].mean() + 1e-20))
+
+
 def best_offset(x, y, lat, maxp, sr):
     # PSOLA and the phase vocoder output exactly at their reported latency. The rotating-tap baseline
     # wanders around ~W/2, so it is aligned by its level envelope (10 ms RMS), which works for shifted
@@ -79,7 +113,7 @@ def evaluate(track, sr_in, x, t_in, f0_in, v_in, conf_in, y, t_out, f0_out, v_ou
     vin = (v_in == 3) & (f0_in > 0)
     # output frame for input time t is at t + offset
     on, errs, periods_in, periods_out = 0, [], [], []
-    env_d, n_env = [], 0
+    env_d, n_env, rough_d = [], 0, []
     for ti, fi in zip(t_in[vin], f0_in[vin]):
         j = np.searchsorted(t_out, ti + offset_s)
         if j <= 0 or j >= len(t_out):
@@ -105,6 +139,10 @@ def evaluate(track, sr_in, x, t_in, f0_in, v_in, conf_in, y, t_out, f0_out, v_ou
         if np.sqrt(np.mean(ys ** 2)) < 1e-4:
             continue
         p = min(sr / fi, sr / (fi * ratio))
+        if fi * ratio >= 90 and abs(ratio - 1) > 0.02:
+            g = ghost_db(ys, sr, fi, fi * ratio)
+            if g is not None:
+                rough_d.append(g)
         ex, ey = envelope_db(xs, sr, p), envelope_db(ys, sr, p)
         f = np.fft.rfftfreq(N, 1 / sr)
         # compare only where the input envelope carries energy (within 40 dB of its peak in the band):
@@ -121,7 +159,7 @@ def evaluate(track, sr_in, x, t_in, f0_in, v_in, conf_in, y, t_out, f0_out, v_ou
         a = int(ti * sr) - 1024; b = int((ti + offset_s) * sr) - 1024
         if a >= 0 and b >= 0 and a + 2048 <= len(x) and b + 2048 <= len(y):
             lv.append(20 * np.log10((np.sqrt(np.mean(y[b:b + 2048] ** 2)) + 1e-9) / (np.sqrt(np.mean(x[a:a + 2048] ** 2)) + 1e-9)))
-    return dict(total=total, on=on, errs=errs, env=env_d, per=per, level=lv)
+    return dict(total=total, on=on, errs=errs, env=env_d, per=per, level=lv, rough=rough_d)
 
 
 def main():
@@ -129,6 +167,10 @@ def main():
     root, lab, work = args[0], args[1], args[2]
     report = args[3] if len(args) > 3 else None
     tracks_arg = next((a.split('=', 1)[1] for a in sys.argv if a.startswith('--tracks=')), None)
+    global ALGOS, SHIFTS
+    ALGOS = next((a.split('=', 1)[1].split(',') for a in sys.argv if a.startswith('--algos=')), ALGOS)
+    SHIFTS = next(([int(v) for v in a.split('=', 1)[1].split(',')] for a in sys.argv if a.startswith('--shifts=')), SHIFTS)
+    tag = next((a.split('=', 1)[1] for a in sys.argv if a.startswith('--tag=')), '')
     os.makedirs(os.path.join(work, 'wav'), exist_ok=True)
     os.makedirs(os.path.join(work, 'shift'), exist_ok=True)
     rows = {r['id']: r for r in csv.DictReader(open(os.path.join(root, 'manifest.csv')))}
@@ -146,7 +188,7 @@ def main():
                 if r['dataset'] == ds and label == key and r['id'] not in ids:
                     ids.append(r['id']); break
         ids += [r['id'] for r in rows.values() if r['dataset'] == 'vocadito'][:max(0, DEFAULT_TRACKS - len(ids))]
-    res = defaultdict(lambda: dict(total=0, on=0, errs=[], env=[], per=[], level=[], cpu=[], lat=0.0))
+    res = defaultdict(lambda: dict(total=0, on=0, errs=[], env=[], per=[], level=[], cpu=[], lat=0.0, rough=[]))
     for tid in ids:
         r = rows[tid]
         wav = os.path.join(work, 'wav', tid + '.wav')
@@ -158,7 +200,7 @@ def main():
         maxp = sr / 65.0
         for algo in ALGOS:
             for s in SHIFTS:
-                out = os.path.join(work, 'shift', f'{tid}_{algo}_{s:+d}.wav')
+                out = os.path.join(work, 'shift', f'{tid}_{algo}{tag}_{s:+d}.wav')
                 info = run([lab, 'shift', algo, str(s), '0', '0.3', wav, out])
                 lat = int(re.search(r'latency_samples=(\d+)', info).group(1))
                 proc = float(re.search(r'process_s=([\d.]+)', info).group(1))
@@ -169,21 +211,21 @@ def main():
                 e = evaluate(tid, sr, x, t_in, f0_in, v_in, c_in, y, t_o, f0_o, v_o, c_o, 2 ** (s / 12), off / sr, sr)
                 for key in ((algo, s), (algo, 'all')) if s != 0 else ((algo, s),):
                     R = res[key]
-                    R['total'] += e['total']; R['on'] += e['on']; R['errs'] += e['errs']; R['env'] += e['env']
+                    R['total'] += e['total']; R['on'] += e['on']; R['errs'] += e['errs']; R['env'] += e['env']; R['rough'] += e['rough']
                     R['per'].append(e['per']); R['level'] += e['level']; R['cpu'].append(100 * proc / aud)
                     R['lat'] = 1000 * lat / sr
             print('done', tid, flush=True)
     lines = ['# Pitch shifter comparison on real vocals', '',
              f'Tracks ({len(ids)}): ' + ', '.join(ids), '',
-             '| Algorithm | Shift | On pitch | Pitch error | Formant shift | Periodicity | Level | CPU (1 voice) | Latency |',
-             '|---|---|---|---|---|---|---|---|---|']
+             '| Algorithm | Shift | On pitch | Pitch error | Formant shift | Ghost of lead | Periodicity | Level | CPU (1 voice) | Latency |',
+             '|---|---|---|---|---|---|---|---|---|---|']
     for algo in ALGOS:
         for s in SHIFTS + ['all']:
             R = res[(algo, s)]
             if not R['total']:
                 continue
             lines.append(f"| {algo} | {s if s == 'all' else ('0 (floor)' if s == 0 else f'{s:+d}')} | {100 * R['on'] / R['total']:.1f} % | "
-                         f"{np.median(R['errs']) if R['errs'] else float('nan'):.1f} c | {np.mean(R['env']):.2f} dB | "
+                         f"{np.median(R['errs']) if R['errs'] else float('nan'):.1f} c | {np.mean(R['env']):.2f} dB | {np.median(R['rough']) if R['rough'] else float('nan'):+.1f} dB | "
                          f"{np.mean(R['per']):.2f} | {np.median(R['level']):+.1f} dB | {np.mean(R['cpu']):.2f} % | {R['lat']:.1f} ms |")
     text = '\n'.join(lines) + '\n'
     print(text)
