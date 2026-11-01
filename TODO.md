@@ -28,7 +28,8 @@
 - [x] PSOLA de-roboticising: grain blending (ghost −31.9 → −36.4 dB); downward shifts investigated with a fair measure (close to the method's floor; three ideas measured worse and dropped, DSP_DESIGN §2)
 - [x] Pitch correction (natural and hard), lead transpose and formant, harmonies follow the corrected lead (v3 parameters)
 - [x] Three ocean interface directions as mockups (Design canvas "Kural Interface Directions")
-- [ ] Owner: pick a direction; listen to the updated page (new vs before)
+- [x] Owner picked direction A (Shallows): build it as a plugin window, no green/orange, logo = குரல் + "by R4N" only (round 2 board A2 on the canvas)
+- [ ] Owner: confirm A2; listen to the updated page (new vs before)
 - [ ] Interface controls for tune / lead (with the chosen redesign)
 - [ ] Transform modules: Duet, Vocoder, Mutate (ring mod), Tube; Pitch & Throat pad
 - [ ] Preset library (format, browser, factory set)
