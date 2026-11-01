@@ -390,6 +390,56 @@ int main (int argc, char** argv)
                 juce::String::formatted ("%.1f kHz, every effect on and automated: finite, %ld allocs, peak %.2f", fsx / 1000.0, st.allocs, st.peak));
     }
 
+    // 6e. presets: every factory preset loads, sets what it says, and plays (finite, no allocation);
+    //     a user preset saves and loads back; A/B switching restores each side exactly
+    {
+        const auto tmp = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("kural-preset-test");
+        tmp.deleteRecursively();
+        kural::PresetManager::setUserFolderForTests (tmp);
+        KuralProcessor p;
+        p.prepareToPlay (48000.0, 256);
+        auto& pm = p.presets;
+        pm.refresh();
+        int played = 0, bad = 0;
+        long allocs = 0;
+        for (int i = 0; i < pm.list().size(); ++i)
+        {
+            if (! pm.list()[i].factory) continue;
+            pm.load (i);
+            for (const auto& f : kural::PresetManager::factory())
+                if (pm.list()[i].name == f.name)
+                    for (auto [id, val] : f.values)
+                        if (auto* r = dynamic_cast<juce::RangedAudioParameter*> (p.apvts.getParameter (id)))
+                            if (std::abs (r->convertFrom0to1 (r->getValue()) - val) > 0.51f) ++bad;
+            auto st = run (p, { Signal::vocal, 48000.0 }, 0.4, 256, true, 2, 2);
+            if (st.finite && st.peak < 4.0f) ++played;
+            allocs += st.allocs;
+        }
+        const int nFactory = (int) kural::PresetManager::factory().size();
+        // user preset round trip
+        p.apvts.getParameter (kural::ids::retune)->setValueNotifyingHost (p.apvts.getParameter (kural::ids::retune)->convertTo0to1 (123.0f));
+        const bool saved = pm.saveUser ("Test Tide");
+        pm.load (0);
+        int userIdx = -1;
+        for (int i = 0; i < pm.list().size(); ++i) if (pm.list()[i].name == "Test Tide") userIdx = i;
+        pm.load (userIdx);
+        const float back = p.apvts.getParameter (kural::ids::retune)->convertFrom0to1 (p.apvts.getParameter (kural::ids::retune)->getValue());
+        // A/B
+        pm.selectSlot (0);
+        auto* rp = p.apvts.getParameter (kural::ids::reverbMix);
+        rp->setValueNotifyingHost (rp->convertTo0to1 (10.0f));
+        pm.selectSlot (1);
+        rp->setValueNotifyingHost (rp->convertTo0to1 (70.0f));
+        pm.selectSlot (0);
+        const float a = rp->convertFrom0to1 (rp->getValue());
+        pm.selectSlot (1);
+        const float b = rp->convertFrom0to1 (rp->getValue());
+        report (played == nFactory && bad == 0 && allocs == 0 && saved && userIdx >= 0 && std::abs (back - 123.0f) < 1.0f && std::abs (a - 10.0f) < 0.6f && std::abs (b - 70.0f) < 0.6f,
+                juce::String::formatted ("presets: %d/%d factory presets load as defined and play (%d mismatches, %ld allocs); user preset round trip %.0f ms (123); A/B %.0f / %.0f %% (10 / 70)",
+                                         played, nFactory, bad, allocs, back, a, b));
+        tmp.deleteRecursively();
+    }
+
     // 7. state: save → restore round trip, and an older/partial state falls back to defaults
     {
         KuralProcessor a, b;

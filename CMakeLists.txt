@@ -76,6 +76,7 @@ set(KURAL_PLUGIN_SOURCES
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp
     Source/Params.cpp
+    Source/Presets.cpp
     Source/UI/Theme.cpp
     Source/UI/PitchView.cpp)
 

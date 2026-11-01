@@ -5,6 +5,7 @@
 #include "DSP/Fx.h"
 #include "DSP/HarmonyEngine.h"
 #include "Params.h"
+#include "Presets.h"
 
 // Kural audio processor.
 //
@@ -50,6 +51,7 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     juce::AudioProcessorValueTreeState apvts;
+    kural::PresetManager presets { apvts };   // message thread only
 
     // ---- analysis feed for the editor (audio thread writes, message thread reads)
     static constexpr int displayVoices = kural::dsp::HarmonyEngine::maxVoices;
