@@ -154,9 +154,16 @@ void KuralProcessor::process (juce::AudioBuffer<float>& buffer, bool bypassedByH
             if (auto b = pos->getBpm()) bpm = *b;
     readParameters();
     const int n = buffer.getNumSamples();
+    const auto t0 = juce::Time::getHighResolutionTicks();
     // a host may send more samples than announced in prepareToPlay: work in announced-size pieces
     for (int start = 0; start < n; start += maxBlock)
         processChunk (buffer, start, juce::jmin (maxBlock, n - start), bypassedByHost);
+    if (n > 0)
+    {
+        const double used = juce::Time::highResolutionTicksToSeconds (juce::Time::getHighResolutionTicks() - t0);
+        const float load = (float) (used / ((double) n / fs));
+        cpuLoad.store (cpuLoad.load (std::memory_order_relaxed) * 0.95f + load * 0.05f, std::memory_order_relaxed);
+    }
 }
 
 void KuralProcessor::processChunk (juce::AudioBuffer<float>& buffer, int start, int n, bool bypassedByHost)
@@ -279,9 +286,11 @@ void KuralProcessor::pushFrame (const kural::dsp::PitchFrame& f) noexcept
     a.voicing = f.voicing;
     for (int v = 0; v < displayVoices; ++v)
     {
-        a.shift[(size_t) v] = engine.voiceShift (v);
+        a.shift[(size_t) v] = engine.voiceShift (v) + engine.leadCorrection();   // harmonies follow the corrected lead
         if (engine.voiceActive (v)) a.activeVoices = (std::uint16_t) (a.activeVoices | (1u << v));
     }
+    a.leadShift = engine.leadShift();
+    a.leadActive = engine.leadActive();
     clockSec.store (a.timeSec, std::memory_order_relaxed);
 
     // full FIFO (editor closed or stalled): the frame is dropped, never blocks

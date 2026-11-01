@@ -17,8 +17,14 @@ int main (int argc, char** argv)
     KuralProcessor p;
     const double fs = 48000.0;
     const int blk = 256;
+    // optional: a preset by name (e.g. "Hard Tide") and the lower page (0 harmony, 1 effects)
+    const juce::String preset = argc > 4 ? juce::String (argv[4]) : juce::String();
+    const int page = argc > 5 ? juce::String (argv[5]).getIntValue() : 0;
+    for (int i = 0; i < p.presets.list().size(); ++i)
+        if (p.presets.list()[i].name == preset) p.presets.load (i);
     p.prepareToPlay (fs, blk);
     std::unique_ptr<KuralEditor> ed (dynamic_cast<KuralEditor*> (p.createEditor()));
+    ed->showPage (page);
 
     // a phrase: G3 – A3 – B3 – D4 with glides, vibrato on the long notes, a breath and a consonant gap
     struct Note { double start, len, midi; };

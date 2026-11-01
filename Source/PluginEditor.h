@@ -4,15 +4,19 @@
 #include "UI/PitchView.h"
 #include "UI/Theme.h"
 
-// Kural editor. All drawing happens in design units (baseW × baseH) inside one content component
-// that is scaled as a whole when the window is resized, so every size looks the same and stays
-// sharp at any display scale.
+// Kural editor, direction "Shallows" (A2). All drawing happens in design units (baseW × baseH) inside
+// one content component that is scaled as a whole when the window is resized, so every size looks
+// the same and stays sharp at any display scale.
 //
-//   header      logo lockup, build status
-//   screen      live pitch: the lead and every sounding harmony voice (real engine data)
-//   harmony     key, scale, harmonies on/off; one strip per voice (on, interval, octave, level,
-//               pan, formant, fine) in the voice's screen colour
-//   bottom      input meter, latency; consonants, glide, harmony level, dry level, output; bypass
+//   header        logo (குரல் by R4N), presets (browse, save, A/B), key, scale, bypass
+//   meters        input (left), output (right)
+//   display well  live pitch: lead as heard, lead as sung, every harmony voice (real engine data)
+//   tune          on, natural / hard, retune speed, vibrato kept, humanize, flex-tune
+//   lower left    HARMONY page (4 voices + harmony level, consonants, glide, naturalness)
+//                 EFFECTS page (tone, dynamics, mutate, delay, reverb, stereo)
+//   lower right   pitch & throat pad, duet, lead pitch / throat, dry, output
+//   status bar    sample rate, latency, CPU, version — read from the processor
+// Every control is attached to a real parameter; nothing is decorative.
 class KuralEditor : public juce::AudioProcessorEditor, private juce::Timer
 {
 public:
@@ -22,14 +26,17 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
-    static constexpr int baseW = 1040, baseH = 820;
+    static constexpr int baseW = 1100, baseH = 700;
 
     // test hook (snapshot tool): pull pending analysis and advance the view by dt without a timer
     void pumpForSnapshot (double dtSec);
+    void showPage (int page);          // 0 = harmony, 1 = effects
 
 private:
     void timerCallback() override;
-    void updateVoiceStrips();
+    void refreshDynamic();
+    void showPresetMenu();
+    void savePresetDialog();
 
     struct Look : public juce::LookAndFeel_V4
     {
@@ -37,15 +44,14 @@ private:
         void drawRotarySlider (juce::Graphics&, int x, int y, int w, int h, float pos, float a0, float a1, juce::Slider&) override;
         void drawButtonBackground (juce::Graphics&, juce::Button&, const juce::Colour&, bool over, bool down) override;
         void drawButtonText (juce::Graphics&, juce::TextButton&, bool over, bool down) override;
-        juce::Font getTextButtonFont (juce::TextButton&, int) override { return fonts.ui (700, 13.0f); }
         juce::Slider::SliderLayout getSliderLayout (juce::Slider&) override;
-        void drawCornerResizer (juce::Graphics&, int w, int h, bool over, bool dragging) override;
         void drawComboBox (juce::Graphics&, int w, int h, bool down, int bx, int by, int bw, int bh, juce::ComboBox&) override;
-        juce::Font getComboBoxFont (juce::ComboBox&) override { return fonts.ui (600, 14.0f); }
+        juce::Font getComboBoxFont (juce::ComboBox&) override { return fonts.ui (500, 14.0f); }
         void positionComboBoxText (juce::ComboBox&, juce::Label&) override;
         juce::Font getPopupMenuFont() override { return fonts.ui (500, 15.0f); }
         void drawPopupMenuBackground (juce::Graphics&, int w, int h) override;
         void drawTooltip (juce::Graphics&, const juce::String&, int w, int h) override;
+        void drawCornerResizer (juce::Graphics&, int w, int h, bool over, bool dragging) override;
         const kural::ui::Fonts& fonts;
     };
 
@@ -62,6 +68,25 @@ private:
         float bgScale = 0.0f;
     };
 
+    // pitch (vertical) and throat (horizontal) for the lead, on one pad
+    class ThroatPad : public juce::Component, public juce::SettableTooltipClient
+    {
+    public:
+        ThroatPad (KuralProcessor&, const kural::ui::Fonts&);
+        void paint (juce::Graphics&) override;
+        void mouseDown (const juce::MouseEvent&) override;
+        void mouseDrag (const juce::MouseEvent&) override;
+        void mouseUp (const juce::MouseEvent&) override;
+        void mouseDoubleClick (const juce::MouseEvent&) override;
+    private:
+        void setFrom (juce::Point<float>);
+        juce::RangedAudioParameter* pitch;
+        juce::RangedAudioParameter* throat;
+        std::unique_ptr<juce::ParameterAttachment> pitchAtt, throatAtt;
+        float pitchV = 0.0f, throatV = 0.0f;
+        const kural::ui::Fonts& fonts;
+    };
+
     using SliderAtt = juce::AudioProcessorValueTreeState::SliderAttachment;
     using ButtonAtt = juce::AudioProcessorValueTreeState::ButtonAttachment;
     using ComboAtt = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
@@ -70,15 +95,17 @@ private:
     {
         juce::Slider s;
         std::unique_ptr<SliderAtt> att;
-        juce::String label;
-        juce::Colour accent;
     };
-    void setupKnob (Knob&, const juce::String& paramId, const juce::String& label, juce::Rectangle<int> bounds,
-                    const juce::String& tip, juce::Colour accent, double resetValue);
-    void setupCombo (juce::ComboBox&, std::unique_ptr<ComboAtt>&, const juce::String& paramId, juce::Rectangle<int> bounds,
-                     const juce::String& tip);
+    enum class KnobSize { big, small, mini };
+    void knob (Knob&, const juce::String& paramId, const juce::String& label, juce::Rectangle<int>, KnobSize,
+               const juce::String& tip, int page = -1);
+    void combo (juce::ComboBox&, std::unique_ptr<ComboAtt>&, const juce::String& paramId, juce::Rectangle<int>, bool dark,
+                const juce::String& tip, int page = -1);
+    void toggle (juce::TextButton&, std::unique_ptr<ButtonAtt>&, const juce::String& paramId, juce::Rectangle<int>,
+                 const juce::String& style, const juce::String& tip, int page = -1);
+    void place (juce::Component&, juce::Rectangle<int>, int page);
 
-    struct VoiceStrip
+    struct VoiceCard
     {
         juce::TextButton on;
         std::unique_ptr<ButtonAtt> onAtt;
@@ -94,18 +121,45 @@ private:
     Look look { fonts };
     Content content { *this };
     kural::ui::PitchView pitchView { fonts };
+    ThroatPad pad { proc, fonts };
     juce::TooltipWindow tooltips { this, 700 };
 
+    // header
+    juce::TextButton prevPreset { juce::String::fromUTF8 ("\xe2\x97\x80") }, nextPreset { juce::String::fromUTF8 ("\xe2\x96\xb6") },
+                     presetName, savePreset { "Save" }, slotA { "A" }, slotB { "B" }, bypassButton { "BYPASS" };
     juce::ComboBox keyBox, scaleBox;
     std::unique_ptr<ComboAtt> keyAtt, scaleAtt;
-    juce::TextButton harmonyButton { "HARMONIES" }, bypassButton { "BYPASS" };
-    std::unique_ptr<ButtonAtt> harmonyAtt, bypassAtt;
-    std::array<VoiceStrip, kural::registeredVoices> strips;
-    Knob consonants, glide, harmonyLevel, dryLevel, output;
+    std::unique_ptr<ButtonAtt> bypassAtt;
+
+    // tune
+    juce::TextButton tuneOn, naturalButton { "Natural" }, hardButton { "Hard" };
+    std::unique_ptr<ButtonAtt> tuneOnAtt;
+    Knob retune, vibrato, humanize, flex;
+
+    // lower left: pages
+    juce::TextButton tabHarmony { "HARMONY" }, tabEffects { "EFFECTS" }, harmonyOn;
+    std::unique_ptr<ButtonAtt> harmonyOnAtt;
+    std::array<VoiceCard, kural::registeredVoices> cards;
+    Knob harmonyLevel, consonants, glide, naturalness;
+    Knob lowCut, presence, air, compression, tube, mutateMix, delayMix, delayTime, delayFeedback, reverbMix, reverbSize, reverbDecay,
+         reverbDamping, width;
+    juce::TextButton mutateOn, pingPong { "PING-PONG" };
+    std::unique_ptr<ButtonAtt> mutateOnAtt, pingPongAtt;
+    juce::ComboBox mutateRatio, delaySync;
+    std::unique_ptr<ComboAtt> mutateRatioAtt, delaySyncAtt;
+    std::vector<std::pair<juce::Component*, int>> paged;   // component, page
+    int page = 0;
+    int cardMask = -1;
+
+    // lower right
+    juce::TextButton duetOn;
+    std::unique_ptr<ButtonAtt> duetOnAtt;
+    Knob duetLevel, duetSpread, leadPitch, leadFormant, dryLevel, output;
 
     std::vector<KuralProcessor::AnalysisFrame> popBuf = std::vector<KuralProcessor::AnalysisFrame> (2048);
-    float inMeterDb = -120.0f;
+    float inMeterDb = -120.0f, outMeterDb = -120.0f;
     double lastTick = 0.0;
+    juce::String shownPreset;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (KuralEditor)
 };

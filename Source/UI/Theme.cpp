@@ -26,7 +26,11 @@ const kural::ui::Theme& kural::ui::theme()
         o.pearl = hex (0xe6ece4);   o.pearlDim = hex (0x8fa3a3);    o.label = hex (0xc9d6d2);  o.dim = hex (0x5f7a82);
         // the voice: muted cyan core, sea-glass accents
         o.voice = hex (0xbfeee9);   o.voiceGlow = hex (0x3fb3b8);   o.seaGlass = hex (0x7cc8b4);
-        o.warn = hex (0xe0a86a);
+        o.warn = hex (0xd98a7a);
+        o.chassis = hex (0xd6e1e4);  o.panel = hex (0xeef3f3);  o.panelLine = hex (0xa9bcc2);  o.cardLine = hex (0xc3d1d5);
+        o.ink = hex (0x102532);      o.muted = hex (0x4d6370);  o.well = hex (0x0f2a3a);       o.wellTop = hex (0x16405a);
+        o.wellText = hex (0x8fb0be); o.accent = hex (0x1d4a66); o.led = hex (0x6fb4cf);
+        o.knobFace = hex (0xd9e9ee); o.knobTrack = hex (0xb8c8cd); o.aqua = hex (0xa9dcea);
         return o;
     }();
     return t;

@@ -2,9 +2,10 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 // Kural visual system. Same grammar as the R4N family (Anbu): a one-word Tamil logo in Catamaran
-// with "by R4N" beneath, Barlow Semi Condensed for every label, thin accent hairlines, a dark
-// analysis screen. Anbu's maroon plate and gold "zari" thread become deep water and a pearl
-// thread here (pearl: the Gulf of Mannar pearl beds off the Tamil coast).
+// with "by R4N" beside it, Barlow Semi Condensed for every label. Direction "Shallows" (chosen by the
+// owner): daylight through shallow water — a pale wet-stone chassis with a faint caustic texture,
+// frosted panels, deep-water display wells, pearl and pale aqua for live signals. No greens or
+// oranges; colours that must be told apart also differ in lightness.
 namespace kural::ui
 {
 struct Theme
@@ -14,6 +15,10 @@ struct Theme
     juce::Colour pearl, pearlDim, label, dim;     // text and the pearl hairline
     juce::Colour voice, voiceGlow, seaGlass;      // the live vocal line, its glow, active accents
     juce::Colour warn;
+    // the plugin window (direction A2, "Shallows"): wet stone seen through a film of water, deep
+    // water in the display wells, pearl and pale aqua for what is live
+    juce::Colour chassis, panel, panelLine, cardLine, ink, muted, well, wellTop, wellText, accent, led,
+                 knobFace, knobTrack, aqua;
 };
 const Theme& theme();
 

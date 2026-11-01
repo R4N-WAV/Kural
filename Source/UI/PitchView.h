@@ -40,10 +40,13 @@ private:
         kural::dsp::Voicing v;
         std::uint16_t active;
         std::array<float, shownVoices> shift;
+        float lead;          // shift applied to the lead (tune + transpose)
+        bool leadOn;         // the processed lead is what is heard
     };
     float yForMidi (float midi) const;
     void paintGrid (juce::Graphics&);
     void paintReadout (juce::Graphics&, const Frame* last);
+    // voice: −2 = the lead as sung (dashed, under), −1 = the lead as heard, 0… = harmony voices
     void strokeRun (juce::Graphics&, const std::vector<const Frame*>& vis, size_t i, size_t j, int voice,
                     const std::function<float (double)>& xForT);
 

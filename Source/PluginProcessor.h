@@ -62,11 +62,14 @@ public:
         kural::dsp::Voicing voicing = kural::dsp::Voicing::silence;
         std::uint16_t activeVoices = 0;                 // bit v = voice v sounding
         std::array<float, displayVoices> shift {};      // semitones each voice is shifted by (what is applied)
+        float leadShift = 0.0f;                         // semitones the lead is moved by (tune + transpose)
+        bool leadActive = false;                        // the processed lead replaces the dry vocal
     };
     int popAnalysis (AnalysisFrame* dest, int maxFrames);     // message thread
     double currentSampleRate() const { return fs; }
     double analysisClockSec() const { return clockSec.load (std::memory_order_relaxed); }
     std::atomic<float> inputPeakDb { -120.0f }, outputPeakDb { -120.0f };
+    std::atomic<float> cpuLoad { 0.0f };              // share of the block's real time spent processing (smoothed)
 
 private:
     void process (juce::AudioBuffer<float>&, bool bypassedByHost);
