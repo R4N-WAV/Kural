@@ -7,8 +7,8 @@ Only results that were actually run are recorded here. "Pending" means not yet d
 | Environment | Used for | Status |
 |---|---|---|
 | Linux x86-64 (Ubuntu 24.04, GCC 13.3, Xeon server core), development container | DSP tests, stress test, snapshots | Run 1 Nov 2026, see below |
-| GitHub Actions `windows-2022`, MSVC 2022, x64 | Release build, all tests, pluginval, installer install/uninstall on a clean machine | Pending first run |
-| GitHub Actions `ubuntu-24.04` | DSP tests on every push | Pending first run |
+| GitHub Actions `windows-2022`, MSVC 2022, x64 | Release build, all tests, pluginval, installer install/uninstall on a clean machine | **All green since run 3 (commit 31466d0)** |
+| GitHub Actions `ubuntu-24.04` | DSP tests on every push | Green |
 | FL Studio / Cubase / Reaper on Windows 10/11 | Real host loading and use | **Pending (manual; no DAW in the build environment)** |
 
 ## Automated results (Linux, 1 Nov 2026, version 0.1.0)
@@ -41,6 +41,11 @@ Only results that were actually run are recorded here. "Pending" means not yet d
   built, installed, replaced a stale copy and matched the built binary. The extra pluginval pass on
   the *installed* copy failed only because the CI script did not quote the path ("Program Files"
   was split at the space). Script fixed.
+- Run 3 (commit 31466d0): **everything green** – DSP 30/30, robustness 90/90, snapshots, pluginval
+  strictness 10 on the built plugin, installer built, installed on the clean runner (stale copy
+  replaced, binary hash matched, uninstaller outside the VST3 folder), pluginval 5 on the installed
+  copy, uninstalled cleanly. Published as the `latest` pre-release (Kural-Setup-Windows.exe 4.2 MB,
+  Kural-VST3-Windows.zip 2.7 MB).
 
 ## Manual DAW checklist (pending)
 

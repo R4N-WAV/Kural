@@ -6,7 +6,7 @@ vocals where audio is involved.
 
 | Phase | Deliverable | Status |
 |---|---|---|
-| 1. Research and foundation | Stable, recognisable Kural VST3 foundation | **Done in code; Windows CI run pending; DAW check pending (manual)** |
+| 1. Research and foundation | Stable, recognisable Kural VST3 foundation | **Done; Windows CI green (build, tests, pluginval 10, installer); DAW check pending (manual)** |
 | 2. Core pitch engine | Reliable vocal analysis | **Implemented and tested on synthetic signals; real-vocal validation pending** |
 | 3. First harmony engine | Harmonizer with a few high-quality voices | Next |
 | 4. Expand to 16 voices | Working 16-voice engine, CPU benchmarked | Planned |
@@ -28,8 +28,8 @@ vocals where audio is involved.
   headless editor snapshot.
 - Windows CI: build, tests, snapshots, pluginval (strictness 10), Inno Setup installer built,
   installed, validated and uninstalled on a clean runner, release published from `main`.
-- Remaining for Phase 1: confirm the first Windows CI run is green; load the plugin in FL Studio,
-  Cubase and Reaper (manual, checklist in VALIDATION.md).
+- Remaining for Phase 1: load the plugin in FL Studio, Cubase and Reaper (manual, checklist in
+  VALIDATION.md).
 
 ## Phase 2 – what exists / remains
 

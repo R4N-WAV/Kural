@@ -10,10 +10,9 @@
 - [x] Stress test: 6 sample rates × 4 block patterns × 3 layouts, hostile signals, automation, bypass, state, re-prepare, editor lifecycle, no allocation on the audio thread (90 checks, all pass on Linux)
 - [x] Editor: Tamil logo குரல் (shaping checked in a headless render), live pitch display from real frames, input meter, output knob, bypass, scalable
 - [x] Installer (Inno Setup, dark wizard, artwork with correctly shaped Tamil), CI install/validate/uninstall test
-- [x] GitHub Actions: Windows build, tests, snapshots, pluginval strictness 10, release publishing
+- [x] GitHub Actions: Windows build, tests, snapshots, pluginval strictness 10, installer install/validate/uninstall, release publishing – all green on Windows (run 3)
 
 ## Current
-- [ ] First Windows CI run green (build, pluginval 10, installer test)
 - [ ] Manual: load in FL Studio, Cubase, Reaper (checklist in VALIDATION.md)
 
 ## Remaining (next: Phase 3)
