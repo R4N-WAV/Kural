@@ -75,6 +75,8 @@ private:
     float detPeriod = 0.0f;            // samples; 0 = none
     Voicing detVoicing = Voicing::silence;
     std::int64_t detTime = -1;
+    float recentPeriod = 0.0f;         // last voiced period and when it was heard (for probing at onsets)
+    std::int64_t recentTime = 0;
     float unvoicedPeriod = 480.0f;     // mark spacing in unvoiced material (~10 ms)
     int searchStride = 1;
 };

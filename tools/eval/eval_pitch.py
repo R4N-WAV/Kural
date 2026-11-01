@@ -92,7 +92,7 @@ def main():
             rt, rf = load_ref(os.path.join(root, r['f0_ref']))
             s = score_ref(t, f0, voi, rt, rf)
             group = r['dataset'] + ('/' + r['voice'] if r['voice'] else '')
-            for g in (r['dataset'], group, 'all'):
+            for g in sorted({r['dataset'], group, 'all'}):
                 for k in ('ref_voiced', 'ref_unvoiced', 'recall', 'fa', 'rpa', 'octave'):
                     agg[g][k] += s[k]
                 agg[g]['tracks'] += 1

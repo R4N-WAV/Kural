@@ -133,7 +133,7 @@ PitchFrame PitchDetector::analyse() noexcept
         const int alt = localMinNear (2 * tau, 3);
         const double norm = 0.5 / e0;
         const double dTau = diff[(size_t) tau] * norm, dAlt = alt > 0 ? diff[(size_t) alt] * norm : 1.0;
-        if (alt > 0 && dAlt < 0.25 * dTau && dTau - dAlt > 0.04)
+        if (alt > 0 && dAlt < cfg.octaveGuard * dTau && dTau - dAlt > 0.04)
             tau = alt;
     }
 

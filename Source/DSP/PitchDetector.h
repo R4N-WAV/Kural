@@ -38,6 +38,7 @@ struct PitchDetectorConfig
     float uncertainLimit = 0.35f; // d' between threshold and this = "uncertain"
     float hopMs = 5.0f;           // analysis interval
     float silenceDb = -55.0f;     // window RMS below this = silence
+    float octaveGuard = 0.25f;    // the double period wins only if its difference is below this × the single one
 };
 
 class PitchDetector

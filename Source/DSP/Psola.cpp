@@ -36,6 +36,8 @@ void PitchMarker::reset()
     detPeriod = 0.0f;
     detVoicing = Voicing::silence;
     detTime = -1;
+    recentPeriod = 0.0f;
+    recentTime = 0;
 }
 
 float PitchMarker::interp (double pos) const noexcept
@@ -80,6 +82,11 @@ void PitchMarker::onPitchFrame (const PitchFrame& f) noexcept
     detTime = f.centreSample;
     if ((f.voicing == Voicing::voiced || f.voicing == Voicing::uncertain) && f.f0Hz > 0.0f)
         detPeriod = (float) (fs / f.f0Hz);
+    if (f.voicing == Voicing::voiced && f.f0Hz > 0.0f)
+    {
+        recentPeriod = (float) (fs / f.f0Hz);
+        recentTime = f.centreSample;
+    }
 }
 
 void PitchMarker::push (float x) noexcept
@@ -130,19 +137,27 @@ void PitchMarker::advance() noexcept
         }
 
         const auto& last = marks[(size_t) ((markCount - 1) & marksMask)];
-        const int search = detVoiced ? std::max (2, (int) (0.15f * P)) : 0;
-        const double cand = (double) last.pos + P;
-        if (cand + search > (double) tNow) return;            // not enough input yet
 
-        if (! detVoiced)
+        // The detector reports ~20 ms late, so at the start of a note it still says "unvoiced". If a
+        // period was heard recently, probe for it here (wider search) instead of waiting: otherwise the
+        // first periods of every note are treated as consonant and left unshifted.
+        const bool probe = ! detVoiced && recentPeriod > 0.0f && tNow - recentTime < (std::int64_t) (0.5 * fs);
+        if (! detVoiced && ! probe)
         {
+            const double cand = (double) last.pos + unvoicedPeriod;
+            if (cand > (double) tNow) return;
             const auto pos = (std::int64_t) std::llround (cand);
             addMark (pos, (float) (pos - last.pos), 0.0f, false);
             continue;
         }
 
+        const float Pc = detVoiced ? P : std::clamp (recentPeriod, pMin, pMax);
+        const int search = std::max (2, (int) ((probe ? 0.25f : 0.15f) * Pc));
+        const double cand = (double) last.pos + Pc;
+        if (cand + search > (double) tNow) return;            // not enough input yet
+
         // align with the previous period: coarse search on a stride, then fine around the best
-        const int len = (int) std::lround (P);
+        const int len = (int) std::lround (Pc);
         const auto c0 = (std::int64_t) std::llround (cand);
         std::int64_t best = c0;
         float bestC = -2.0f;
@@ -162,8 +177,15 @@ void PitchMarker::advance() noexcept
             }
             bestC = correlate (last.pos, best, len, 1);
         }
-        // two consecutive periods that are not alike are not voiced, whatever the detector said
-        const bool voiced = bestC > 0.55f;
+        // two consecutive periods that are not alike are not voiced, whatever the detector said;
+        // a probe (detector not voiced yet) must be clearly periodic
+        const bool voiced = bestC > (probe ? 0.7f : 0.55f);
+        if (probe && ! voiced)
+        {
+            const auto pos = (std::int64_t) std::llround (cand);
+            addMark (pos, (float) (pos - last.pos), bestC, false);
+            continue;
+        }
         addMark (best, (float) (best - last.pos), bestC, voiced);
     }
 }
@@ -236,16 +258,21 @@ float PsolaVoice::next (const PitchMarker& m) noexcept
         if (ts - P / formant > (double) tOut) break;
 
         // voiced grains are shifted; unvoiced ones are copied at their own spacing and level.
-        // The mix glides over ~2 grains so voicing changes do not click.
-        voicedMix += ((a.voiced ? 1.0f : 0.0f) - voicedMix) * 0.5f;
-        const float ratio = a.voiced ? std::exp2 (semis / 12.0f) : 1.0f;
-        if (voicedMix > 0.001f) addGrain (acc, m, a, ts, a.voiced ? formant : 1.0f, voicedMix);
+        // A mark counts as voiced if the period before it OR the period after it is periodic: at a note's
+        // start the first mark is compared with the breath or consonant before it, and judging it by
+        // that alone left the first periods of every note unshifted (measured on real singing: 97 % of
+        // the off-pitch frames were within 40 ms of a voicing edge). The mix glides over ~1–2 grains.
+        AnalysisMark nx;
+        const bool hasNext = m.markAfter (a.pos, nx);
+        const bool voiced = a.voiced || (hasNext && nx.voiced);
+        voicedMix += ((voiced ? 1.0f : 0.0f) - voicedMix) * 0.75f;
+        const float ratio = voiced ? std::exp2 (semis / 12.0f) : 1.0f;
+        if (voicedMix > 0.001f) addGrain (acc, m, a, ts, voiced ? formant : 1.0f, voicedMix);
         if (voicedMix < 0.999f) addGrain (accU, m, a, ts, 1.0f, (1.0f - voicedMix) * settings.unvoicedGain);
         // advance by the period that follows this mark (the distance to the next mark) when it is known:
         // using the period before it lets the synthesis drift against the marks under vibrato, which now
         // and then repeats or skips a period (measured: unshifted output 5.7 dB envelope error vs 2.8)
-        AnalysisMark nx;
-        const float Pnext = m.markAfter (a.pos, nx) ? std::clamp ((float) (nx.pos - a.pos), 8.0f, m.maxPeriod()) : P;
+        const float Pnext = hasNext ? std::clamp ((float) (nx.pos - a.pos), 8.0f, m.maxPeriod()) : P;
         ts += Pnext / ratio;
     }
 

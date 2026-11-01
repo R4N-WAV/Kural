@@ -105,7 +105,11 @@ int main (int argc, char** argv)
         Wav in;
         if (! load (argv[2], in)) return 1;
         PitchDetector det;
-        det.prepare (in.sampleRate);
+        PitchDetector::Config cfg;
+        // experiment hooks (tools only): KURAL_THRESHOLD, KURAL_OCTAVE_GUARD
+        if (const char* e = std::getenv ("KURAL_THRESHOLD")) cfg.threshold = (float) std::atof (e);
+        if (const char* e = std::getenv ("KURAL_OCTAVE_GUARD")) cfg.octaveGuard = (float) std::atof (e);
+        det.prepare (in.sampleRate, cfg);
         FILE* f = std::fopen (argv[3], "w");
         if (! f) return 1;
         std::fprintf (f, "time_s,f0_hz,confidence,voicing,rms_db\n");
