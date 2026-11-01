@@ -149,6 +149,10 @@ Stats run (KuralProcessor& p, Signal sig, double seconds, int maxBlock, bool ran
 }
 } // namespace
 
+// tests create processors as locals; Windows threads have 1 MB of stack, so the object must stay small
+// (big buffers belong on the heap, allocated in prepareToPlay) — this failed once on Windows only
+static_assert (sizeof (KuralProcessor) < 256 * 1024, "KuralProcessor is too large for a stack object on Windows");
+
 int main (int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI gui;

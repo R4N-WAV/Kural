@@ -12,6 +12,8 @@ void HarmonyEngine::prepare (double sampleRate, float minHz)
     for (auto& v : voices) v.prepare (marker);
     leadVoice.prepare (marker);
     duetVoice.prepare (marker);
+    for (auto& st : state) st.delay.assign (8192, 0.0f);
+    duetState.delay.assign (8192, 0.0f);
     delayGlide = 1.0f - (float) std::exp (-1.0 / (0.25 * fs));       // timing changes glide over ~250 ms
     fadeCoef = 1.0f - (float) std::exp (-1.0 / (0.010 * fs));
     smoothCoef = 1.0f - (float) std::exp (-1.0 / (0.020 * fs));
@@ -25,13 +27,17 @@ void HarmonyEngine::reset()
     marker.reset();
     planner.reset();
     for (auto& v : voices) v.reset (marker);
-    for (int v = 0; v < maxVoices; ++v)
+    // keep each voice's delay line (allocated in prepare), reset everything else
+    auto fresh = [] (VoiceState& st, std::uint32_t seed)
     {
-        state[(size_t) v] = VoiceState {};
-        state[(size_t) v].rng = 0x9E3779B9u * (std::uint32_t) (v + 1);   // fixed seeds: renders repeat exactly
-    }
-    duetState = VoiceState {};
-    duetState.rng = 0xA5A5F00Du;
+        auto buf = std::move (st.delay);
+        st = VoiceState {};
+        st.delay = std::move (buf);
+        std::fill (st.delay.begin(), st.delay.end(), 0.0f);
+        st.rng = seed;
+    };
+    for (int v = 0; v < maxVoices; ++v) fresh (state[(size_t) v], 0x9E3779B9u * (std::uint32_t) (v + 1));   // fixed seeds: renders repeat
+    fresh (duetState, 0xA5A5F00Du);
     duetVoice.reset (marker);
     corrector.reset();
     leadVoice.reset (marker);

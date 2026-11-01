@@ -13,6 +13,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <vector>
 #include "Harmony.h"
 #include "PitchCorrector.h"
 #include "PitchDetector.h"
@@ -158,7 +159,7 @@ private:
         // naturalness: random walks for drift (cents) and timing (ms), and the voice's own delay line
         std::uint32_t rng = 1;
         float driftTarget = 0.0f, drift = 0.0f, timeTarget = 0.0f, timeMs = 0.0f, walkLeft = 0.0f;
-        std::array<float, 8192> delay {};          // 25 ms at up to 192 kHz
+        std::vector<float> delay;                  // allocated in prepare(): 25 ms at up to 192 kHz (8192)
         int w = 0;
         float delaySmp = 0.0f;
     };
