@@ -36,6 +36,11 @@ Only results that were actually run are recorded here. "Pending" means not yet d
   realisations with an error-rate limit; a breath-continuity guard in the detector (gross errors at
   −14 dB breath 0.47 % → 0.12 %, at −10 dB 15.7 % → 3.2 %, confirmed on held-out seeds); a new test
   that real octave drops are still followed under breath noise.
+- Run 2 (commit e319481): build, DSP tests (30/30, identical figures to Linux), robustness checks
+  (90/90), editor snapshots and **pluginval strictness 10 passed** on Windows; the installer was
+  built, installed, replaced a stale copy and matched the built binary. The extra pluginval pass on
+  the *installed* copy failed only because the CI script did not quote the path ("Program Files"
+  was split at the space). Script fixed.
 
 ## Manual DAW checklist (pending)
 

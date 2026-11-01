@@ -153,7 +153,8 @@ jobs:
           # the installed copy is the one a host would load: validate it there
           Write-Output "validating the installed plugin"
           $exe = Get-ChildItem -Recurse pluginval -Filter pluginval.exe | Select-Object -First 1
-          $p = Start-Process -FilePath $exe.FullName -ArgumentList @("--strictness-level","5","--validate-in-process","--timeout-ms","600000","--validate",$vst) -Wait -PassThru -NoNewWindow
+          # Start-Process joins its arguments with spaces: the path contains spaces ("Program Files"), so quote it
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList @("--strictness-level","5","--validate-in-process","--timeout-ms","600000","--validate","`"$vst`"") -Wait -PassThru -NoNewWindow
           if ($p.ExitCode -ne 0) { throw "pluginval failed on the installed plugin ($($p.ExitCode))" }
 
           # the uninstaller hands over to a copy of itself and returns at once: wait for the files to go
