@@ -24,6 +24,17 @@
 - [x] Listening page (A/B, blind option) published
 - [ ] Owner: listening verdict on the page, and DAW check in FL Studio, Cubase, Reaper (VALIDATION.md)
 
+## New scope (owner, 1 Nov 2026): universal vocal FX
+- [x] PSOLA de-roboticising: grain blending (ghost −31.9 → −36.4 dB); downward shifts investigated with a fair measure (close to the method's floor; three ideas measured worse and dropped, DSP_DESIGN §2)
+- [x] Pitch correction (natural and hard), lead transpose and formant, harmonies follow the corrected lead (v3 parameters)
+- [x] Three ocean interface directions as mockups (Design canvas "Kural Interface Directions")
+- [ ] Owner: pick a direction; listen to the updated page (new vs before)
+- [ ] Interface controls for tune / lead (with the chosen redesign)
+- [ ] Transform modules: Duet, Vocoder, Mutate (ring mod), Tube; Pitch & Throat pad
+- [ ] Preset library (format, browser, factory set)
+- [ ] Naturalisation: add back breath/turbulence on upward shifts (PSOLA leaves ~4 dB less than the singer had), per-voice drift and timing
+- [ ] Tune on fast runs: the first frames of a note reached by a slide can pick the neighbouring note
+
 ## Remaining (Phase 3 wrap-up, then Phase 4)
 - [ ] Fixes from the listening review
 - [ ] Test that exercises the sub-multiple octave guard directly (it is covered only indirectly)
@@ -42,5 +53,6 @@
 - Linux test builds need `CXXFLAGS="-DJUCE_USE_XRANDR=0 -DJUCE_USE_XINERAMA=0 -DJUCE_USE_XCURSOR=0 -DJUCE_USE_XRENDER=0 -DJUCE_USE_XSHM=0"` at configure time when the X11 extension headers are missing (JUCE's helper tool is built without the project's definitions).
 - Installer is not code-signed (SmartScreen warning on first run).
 - MIDI input is accepted and ignored until Phase 7.
+- Tune, lead pitch and lead formant are host parameters only; their on-screen controls come with the redesign.
 - Latency is 31 ms at 48 kHz (2 periods of 65 Hz); no low-latency mode yet.
 - Notes below ~65 Hz are shifted with clamped grains (artifacts on very low bass notes).

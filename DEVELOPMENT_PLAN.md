@@ -4,14 +4,24 @@ Priorities: real DSP before visual polish, sound quality before feature count, r
 complexity. A phase is done only when its deliverable is validated, including listening on real
 vocals where audio is involved.
 
+**Scope (owner, 1 Nov 2026):** Kural is a universal vocal effects plugin in the spirit of Auto-Tune EFX —
+pitch correction, pitch shifting, harmonies, formant ("throat") control and transforming effects — with
+a large preset library. Reference for how shifted vocals should sound: Logic Pro's Flex Pitch (notes
+put in tune as a whole while the singer's vibrato, drift and transitions are kept; formants separate).
+The interface is redesigned around the ocean theme (three directions on the "Kural Interface
+Directions" canvas; the owner picks one). Order chosen by the owner: sound quality first, then pitch
+correction, effects, presets, redesign.
+
 | Phase | Deliverable | Status |
 |---|---|---|
 | 1. Research and foundation | Stable, recognisable Kural VST3 foundation | **Done; Windows CI green (build, tests, pluginval 10, installer); DAW check pending (manual)** |
 | 2. Core pitch engine | Reliable vocal analysis | **Done: 96.4 % within 50 c on 40 solo singers (DSP_DESIGN §1)** |
 | 3. First harmony engine | Harmonizer with a few high-quality voices | **In progress (v0.2): 4 voices working in the plugin; listening review by the owner pending** |
+| 3b. Pitch correction and lead processing | Tune (retune, vibrato kept, humanize, flex-tune), lead pitch and formant | **Done in DSP and parameters (v3); interface controls with the redesign; listening pending** |
 | 4. Expand to 16 voices | Working 16-voice engine, CPU benchmarked | Planned |
 | 5. Naturalness and voice differentiation | Convincing layered stacks | Planned |
-| 6. Creative processing | Modes, per-voice processing, stereo | Planned |
+| 6. Creative processing | Transform modules (Duet, Vocoder, Mutate/ring mod, Tube), Pitch & Throat pad, per-voice processing, stereo | Planned |
+| 6b. Preset library | Factory presets in the spirit of Auto-Tune EFX, browser, versioned format | Planned |
 | 7. Musical and MIDI integration | Chord-aware harmony, MIDI notes/chords, automation | Planned |
 | 8. Optional AI | Local, optional, genuinely useful AI features | Research later; never blocks the core |
 | 9. Interface refinement | Polished commercial UI, logo, Tamil verified in hosts | Planned (foundation exists) |

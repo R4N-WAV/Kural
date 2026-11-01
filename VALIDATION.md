@@ -13,7 +13,7 @@ Only results that were actually run are recorded here. "Pending" means not yet d
 
 ## Automated results (Linux, 1 Nov 2026, version 0.2.0)
 
-- `KuralDspTests`: **54/54 pass** – pitch detection (30), harmony planning (16), pitch shifting (8).
+- `KuralDspTests`: **66/66 pass** – pitch detection (30), harmony planning (16), pitch shifting (8), pitch correction (12).
   Figures in DSP_DESIGN.md §1–§3.
 - `KuralStress` (full): **92/92 pass**, with the harmony engine running (default: two voices):
   - 44.1, 48, 88.2, 96, 176.4, 192 kHz × blocks of 1, 64, 512, 4096 (random sizes up to 2× the announced size) × layouts 1→1, 1→2, 2→2: finite output, **0 allocations/frees on the audio thread**, pitch frames produced.
@@ -68,6 +68,24 @@ For each of FL Studio, Cubase, Reaper:
 - [ ] Window resize; Tamil logo rendered correctly on the user's Windows display scaling (100/150/200 %)
 - [ ] 1-hour session with transport start/stop: stable
 - MIDI routing: not applicable until Phase 7
+
+## Pitch correction on real singers (1 Nov 2026, chromatic scale, `KuralLab tune`)
+
+Pitch measured by the detector on the output. "Note centre" = the 180 ms running mean of the pitch,
+distance to the nearest semitone (median over voiced frames).
+
+| Singer | Input: within 10 c / centre off | Natural (25 ms, vibrato kept): centre off / motion kept | Hard (0 ms, flattened): within 10 c / centre off |
+|---|---|---|---|
+| vocadito 36 (low male) | 20 % / 23.4 c | 16.7 c / 16.1 c (in 15.0) | 75 % / 1.8 c |
+| vocadito 37 | 15 % / 27.3 c | 9.6 c / 9.4 c (in 8.8) | 94 % / 0.5 c |
+| vocadito 2 | 34 % / 14.3 c | 11.0 c / 8.4 c (in 7.8) | 92 % / 0.6 c |
+| VocalSet m4 vibrato | 19 % / 27.9 c | 33.7 c / 45.0 c (in 47.4) | 77 % / 2.0 c |
+| VocalSet f3 straight (scales) | 11 % / 36.5 c | 11.0 c / 8.5 c (in 7.3) | 93 % / 0.4 c |
+
+Hard tune does what it should. Natural tune keeps the singer's motion (vibrato and scoops within
+±2 c of the input) and moves note centres towards the pitch, but the 180 ms measure counts scoops and
+the first frames of quickly reached notes, so it understates it; on wide, slow vibrato (m4) the note
+centre is not yet found reliably. To be judged by listening.
 
 ## Real-vocal measurements (1 Nov 2026)
 
