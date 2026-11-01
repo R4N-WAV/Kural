@@ -96,13 +96,16 @@ public:
     void prepare (const PitchMarker&);
     void reset (const PitchMarker&);
     void set (const PsolaVoiceSettings& s) noexcept { settings = s; }
+    void setGrainCentring (bool on) noexcept { centring = on; }       // A/B tests only (see Psola.cpp)
 
     // output sample for input time tOut = marker.now() − marker.latency(); call once per sample
     float next (const PitchMarker&) noexcept;
     float currentSemitones() const noexcept { return semis; }
 
 private:
-    void addGrain (std::vector<float>& dest, const PitchMarker&, const AnalysisMark&, double ts, float formant, float gain) noexcept;
+    void addGrain (std::vector<float>& dest, const PitchMarker&, const AnalysisMark&, double ts, float formant, float gain,
+                   float centreFrac = 0.0f) noexcept;
+    float chooseCentre (const PitchMarker&, const AnalysisMark&, float ratio, float formant) const noexcept;
 
     PsolaVoiceSettings settings;
     // voiced and unvoiced grains are summed separately: the voiced part is level-matched to the
@@ -116,5 +119,8 @@ private:
     float semis = 0.0f, voicedMix = 0.0f;
     double fs = 48000.0;
     std::int64_t lastMarkPos = -1;
+    // grain centring: where in the period voiced grains are centred, chosen per voiced run
+    bool centring = true, prevVoiced = false;
+    float centreFrac = 0.0f, centreRatio = 1.0f;
 };
 } // namespace kural::dsp

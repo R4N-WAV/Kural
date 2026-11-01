@@ -214,9 +214,13 @@ void PsolaVoice::reset (const PitchMarker&)
     semis = settings.semitones;
     voicedMix = 0.0f;
     lastMarkPos = -1;
+    prevVoiced = false;
+    centreFrac = 0.0f;
+    centreRatio = 1.0f;
 }
 
-void PsolaVoice::addGrain (std::vector<float>& dest, const PitchMarker& m, const AnalysisMark& a, double tsAt, float formant, float gain) noexcept
+void PsolaVoice::addGrain (std::vector<float>& dest, const PitchMarker& m, const AnalysisMark& a, double tsAt, float formant, float gain,
+                           float cf) noexcept
 {
     // grain: input around a.pos, ±P, Hann window; laid down around tsAt, time-scaled by 1/formant
     const float P = std::clamp (a.period, 8.0f, m.maxPeriod());
@@ -230,9 +234,83 @@ void PsolaVoice::addGrain (std::vector<float>& dest, const PitchMarker& m, const
     {
         const double u = ((double) t - tsAt) * invHalf;       // −1 … 1
         const float w = (float) (0.5 + 0.5 * std::cos (pi * u));
-        const double src = (double) a.pos + u * P;
+        const double src = (double) a.pos + (double) (cf * P) + u * P;
         dest[(size_t) (t & accMask)] += gain * w * m.interp (src);
     }
+}
+
+// Where in the period voiced grains are centred. A grain is two periods under a Hann window; laid
+// down at the new spacing, the output's low harmonics are built from the leakage of the input's
+// nearest harmonics, and whether those add or cancel depends on where in the period the grain is
+// centred and on the interval. Correlation keeps the marks at the same point of every period, but
+// which point is set by where the voiced run began. Measured on a high female voice (vocadito 2,
+// +4 st, a steady note): at the wrong point the shifted voice fell 20 dB below the input for ~50 ms
+// (heard as a stutter; the level matcher then overshot), while the phase vocoder and ATELIER's tap
+// shifter did not. A fixed rule (centre on the waveform's peak) fixed that case but lost 2.7 dB on a
+// synthetic 440 Hz "a" at +7, and "strongest low harmonics" pulled the formants down, so each voice
+// tries 8 points of the period for its own interval and keeps the one whose first six output
+// harmonics follow the input's own spectral envelope most closely (no notch, no tilt). It chooses at the
+// start of every voiced run and when its interval changes by more than half a semitone, and holds
+// the choice in between: following the waveform from mark to mark was tried and dropped, because
+// each move of the grain centre changes the output period (pitch error 2.5 → 4.6 c on 25 singers).
+float PsolaVoice::chooseCentre (const PitchMarker& m, const AnalysisMark& a, float ratio, float formant) const noexcept
+{
+    if (std::abs (ratio - 1.0f) < 1.0e-3f) return 0.0f;          // unshifted: every point rebuilds the input
+    const float P = std::clamp (a.period, 8.0f, m.maxPeriod());
+    const double room = (double) (m.now() - a.pos) - P - 2.0;   // a grain reads ±P: only input that exists
+    const int n = std::max (8, (int) std::lround (2.0f * P));
+    constexpr int K = 6;                                         // output harmonics compared
+    constexpr int H = 10;                                        // input harmonics for the envelope
+    // the input's own harmonic amplitudes (the envelope the output should follow), from the grain at the mark
+    double env[H + 1] = {};
+    for (int h = 1; h <= H; ++h)
+    {
+        double re = 0.0, im = 0.0;
+        for (int i = 0; i < n; ++i)
+        {
+            const double u = 2.0 * (i + 0.5) / n - 1.0;
+            const double v = (0.5 + 0.5 * std::cos (pi * u)) * m.interp ((double) a.pos + u * P);
+            const double ph = pi * h * u;                           // 2π h (u P) / P
+            re += v * std::cos (ph); im -= v * std::sin (ph);
+        }
+        env[h] = std::sqrt (re * re + im * im) + 1e-9;
+    }
+    auto envAt = [&] (double hf)                                 // log-interpolated between harmonics
+    {
+        if (hf <= 1.0) return std::log (env[1]);
+        if (hf >= (double) H) return std::log (env[H]);
+        const int h = (int) hf;
+        const double t = hf - h;
+        return (1.0 - t) * std::log (env[h]) + t * std::log (env[h + 1]);
+    };
+    // with formant shift the envelope moves with it
+    float best = 0.0f;
+    double bestErr = 1e30;
+    for (int c = 0; c < 8; ++c)
+    {
+        const float cf = (float) c / 8.0f - 0.5f;                  // −½ … +⅜ of a period
+        if ((double) (cf * P) > room) continue;
+        double lg[K], mean = 0.0;
+        for (int k = 1; k <= K; ++k)
+        {
+            double re = 0.0, im = 0.0;
+            const double f = k * ratio / formant;                   // output harmonic, in input-harmonic units
+            for (int i = 0; i < n; ++i)
+            {
+                const double u = 2.0 * (i + 0.5) / n - 1.0;
+                const double v = (0.5 + 0.5 * std::cos (pi * u)) * m.interp ((double) a.pos + cf * P + u * P);
+                const double ph = pi * f * u;
+                re += v * std::cos (ph); im -= v * std::sin (ph);
+            }
+            lg[k - 1] = std::log (std::sqrt (re * re + im * im) + 1e-9) - envAt (f);
+            mean += lg[k - 1];
+        }
+        mean /= K;
+        double err = 0.0;                                        // shape error (overall level is matched later)
+        for (int k = 0; k < K; ++k) err += (lg[k] - mean) * (lg[k] - mean);
+        if (err < bestErr) { bestErr = err; best = cf; }
+    }
+    return best;
 }
 
 float PsolaVoice::next (const PitchMarker& m) noexcept
@@ -267,6 +345,12 @@ float PsolaVoice::next (const PitchMarker& m) noexcept
         const bool voiced = a.voiced || (hasNext && nx.voiced);
         voicedMix += ((voiced ? 1.0f : 0.0f) - voicedMix) * 0.75f;
         const float ratio = voiced ? std::exp2 (semis / 12.0f) : 1.0f;
+        if (voiced && centring && (! prevVoiced || std::abs (std::log2 (ratio / centreRatio)) > 0.5f / 12.0f))
+        {
+            centreFrac = chooseCentre (m, a, ratio, voiced ? formant : 1.0f);
+            centreRatio = ratio;
+        }
+        prevVoiced = voiced;
         if (voicedMix > 0.001f)
         {
             // Blend the two periods around the synthesis point by where it sits between their marks.
@@ -279,8 +363,9 @@ float PsolaVoice::next (const PitchMarker& m) noexcept
                 && (double) nx.pos + (double) std::clamp (nx.period, 8.0f, m.maxPeriod()) <= (double) m.now())
                 alpha = (float) std::clamp ((ts - (double) a.pos) / (double) (nx.pos - a.pos), 0.0, 1.0);
             const float f = voiced ? formant : 1.0f;
-            if (alpha < 0.999f) addGrain (acc, m, a, ts, f, voicedMix * (1.0f - alpha));
-            if (alpha > 0.001f) addGrain (acc, m, nx, ts, f, voicedMix * alpha);
+            const float cf = voiced ? centreFrac : 0.0f;
+            if (alpha < 0.999f) addGrain (acc, m, a, ts, f, voicedMix * (1.0f - alpha), cf);
+            if (alpha > 0.001f) addGrain (acc, m, nx, ts, f, voicedMix * alpha, cf);
         }
         if (voicedMix < 0.999f) addGrain (accU, m, a, ts, 1.0f, (1.0f - voicedMix) * settings.unvoicedGain);
         // advance by the period that follows this mark (the distance to the next mark) when it is known:

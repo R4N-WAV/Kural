@@ -12,6 +12,10 @@ For each track × algorithm × interval, with formants preserved (formant shift 
                 Small = formants kept in place; a plain resampling shifter moves them with the pitch.
   ghost of lead energy left at the original pitch's harmonics relative to the new pitch's harmonics
                 (dB, median): period repetition puts it there and it sounds buzzy/robotic; lower = cleaner
+  dropouts      voiced frames whose output level falls more than 6 dB below the input's (10 ms windows,
+                the track's median difference removed): heard as stutters or holes
+  clicks        per minute: 1 ms bursts in the output's second difference (> 8x its 30 ms level) that the
+                input has no burst at (onsets and plosives of the singer are not counted)
   ghost excess  the same measure minus the input's own energy at the same places between its harmonics
                 (breath, jitter and vibrato put some there in any voice): 0 dB = no added ghost
   periodicity   output periodicity (detector confidence) relative to the input's: below 1 means
@@ -167,7 +171,39 @@ def evaluate(track, sr_in, x, t_in, f0_in, v_in, conf_in, y, t_out, f0_out, v_ou
         a = int(ti * sr) - 1024; b = int((ti + offset_s) * sr) - 1024
         if a >= 0 and b >= 0 and a + 2048 <= len(x) and b + 2048 <= len(y):
             lv.append(20 * np.log10((np.sqrt(np.mean(y[b:b + 2048] ** 2)) + 1e-9) / (np.sqrt(np.mean(x[a:a + 2048] ** 2)) + 1e-9)))
-    return dict(total=total, on=on, errs=errs, env=env_d, per=per, level=lv, rough=rough_d, excess=excess_d)
+    # dropouts: 10 ms level of the output relative to the input on voiced frames, after removing the
+    # track's median difference; a frame more than 6 dB below is a dropout (heard as a stutter)
+    k = int(0.010 * sr)
+    ex = np.sqrt(np.convolve(x ** 2, np.ones(k) / k, 'same')) + 1e-6
+    ey = np.sqrt(np.convolve(y ** 2, np.ones(k) / k, 'same')) + 1e-6
+    rel = []
+    for ti in t_in[vin]:
+        a = int(ti * sr); b = int((ti + offset_s) * sr)
+        if a < len(x) and b < len(y) and ex[a] > 3e-3:
+            rel.append(20 * np.log10(ey[b] / ex[a]))
+    rel = np.array(rel) - (np.median(rel) if rel else 0.0)
+    drops = int((rel < -6.0).sum()) if len(rel) else 0
+    # clicks: 1 ms bursts of the second difference more than 8x its surrounding 30 ms level that the
+    # input does not have at the same moment (the input's own plosives and onsets are not counted)
+    def bursts(v):
+        d2 = np.diff(v, 2) ** 2
+        m1 = int(0.001 * sr); m30 = int(0.030 * sr)
+        e1 = np.convolve(d2, np.ones(m1) / m1, 'same')
+        e30 = np.convolve(d2, np.ones(m30) / m30, 'same') + 1e-12
+        lvl = np.convolve(v[1:-1] ** 2, np.ones(m30) / m30, 'same')
+        hit = (e1 > 8.0 * e30) & (lvl > 1e-5)
+        idx = np.flatnonzero(hit)
+        ev = idx[np.insert(np.diff(idx) > m1 * 3, 0, True)] if len(idx) else idx
+        return ev
+    bo, bi = bursts(y), bursts(x)
+    off = int(round(offset_s * sr)); tol = int(0.004 * sr)
+    clicks = 0
+    for e in bo:
+        j = np.searchsorted(bi, e - off)
+        near = (j < len(bi) and abs(bi[j] - (e - off)) <= tol) or (j > 0 and abs(bi[j - 1] - (e - off)) <= tol)
+        clicks += 0 if near else 1
+    return dict(total=total, on=on, errs=errs, env=env_d, per=per, level=lv, rough=rough_d, excess=excess_d,
+                drops=drops, nrel=len(rel), clicks=clicks, dur=len(y) / sr)
 
 
 def main():
@@ -196,7 +232,7 @@ def main():
                 if r['dataset'] == ds and label == key and r['id'] not in ids:
                     ids.append(r['id']); break
         ids += [r['id'] for r in rows.values() if r['dataset'] == 'vocadito'][:max(0, DEFAULT_TRACKS - len(ids))]
-    res = defaultdict(lambda: dict(total=0, on=0, errs=[], env=[], per=[], level=[], cpu=[], lat=0.0, rough=[], excess=[]))
+    res = defaultdict(lambda: dict(total=0, on=0, errs=[], env=[], per=[], level=[], cpu=[], lat=0.0, rough=[], excess=[], drops=0, nrel=0, clicks=0, dur=0.0))
     for tid in ids:
         r = rows[tid]
         wav = os.path.join(work, 'wav', tid + '.wav')
@@ -220,13 +256,14 @@ def main():
                 for key in ((algo, s), (algo, 'all')) if s != 0 else ((algo, s),):
                     R = res[key]
                     R['total'] += e['total']; R['on'] += e['on']; R['errs'] += e['errs']; R['env'] += e['env']; R['rough'] += e['rough']; R['excess'] += e['excess']
+                    R['drops'] += e['drops']; R['nrel'] += e['nrel']; R['clicks'] += e['clicks']; R['dur'] += e['dur']
                     R['per'].append(e['per']); R['level'] += e['level']; R['cpu'].append(100 * proc / aud)
                     R['lat'] = 1000 * lat / sr
             print('done', tid, flush=True)
     lines = ['# Pitch shifter comparison on real vocals', '',
              f'Tracks ({len(ids)}): ' + ', '.join(ids), '',
-             '| Algorithm | Shift | On pitch | Pitch error | Formant shift | Ghost of lead | Ghost excess | Periodicity | Level | CPU (1 voice) | Latency |',
-             '|---|---|---|---|---|---|---|---|---|---|---|']
+             '| Algorithm | Shift | On pitch | Pitch error | Formant shift | Ghost of lead | Ghost excess | Dropouts | Clicks | Periodicity | Level | CPU (1 voice) | Latency |',
+             '|---|---|---|---|---|---|---|---|---|---|---|---|---|']
     for algo in ALGOS:
         for s in SHIFTS + ['all']:
             R = res[(algo, s)]
@@ -235,6 +272,7 @@ def main():
             lines.append(f"| {algo} | {s if s == 'all' else ('0 (floor)' if s == 0 else f'{s:+d}')} | {100 * R['on'] / R['total']:.1f} % | "
                          f"{np.median(R['errs']) if R['errs'] else float('nan'):.1f} c | {np.mean(R['env']):.2f} dB | {np.median(R['rough']) if R['rough'] else float('nan'):+.1f} dB | "
                          f"{np.median(R['excess']) if R['excess'] else float('nan'):+.1f} dB | "
+                         f"{100 * R['drops'] / max(R['nrel'], 1):.2f} % | {60 * R['clicks'] / max(R['dur'], 1e-9):.1f}/min | "
                          f"{np.mean(R['per']):.2f} | {np.median(R['level']):+.1f} dB | {np.mean(R['cpu']):.2f} % | {R['lat']:.1f} ms |")
     text = '\n'.join(lines) + '\n'
     print(text)

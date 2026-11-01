@@ -142,6 +142,7 @@ int main (int argc, char** argv)
             PsolaVoiceSettings vs { semis, formant, unv, 0.0f };
             if (const char* e = std::getenv ("KURAL_PSOLA_BLEND")) vs.blendGrains = std::atoi (e) != 0;   // A/B hook
             v.set (vs);
+            if (const char* e = std::getenv ("KURAL_PSOLA_CENTRE")) v.setGrainCentring (std::atoi (e) != 0);
             v.reset (mk);
             latency = mk.latency();
             for (size_t i = 0; i < in.mono.size(); ++i)
