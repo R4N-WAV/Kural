@@ -12,17 +12,23 @@
 - [x] Installer (Inno Setup, dark wizard, artwork with correctly shaped Tamil), CI install/validate/uninstall test
 - [x] GitHub Actions: Windows build, tests, snapshots, pluginval strictness 10, installer install/validate/uninstall, release publishing – all green on Windows (run 3)
 
-## Current
-- [ ] Manual: load in FL Studio, Cubase, Reaper (checklist in VALIDATION.md)
+- [x] Workflow that builds the real-vocal test set (vocadito, Dagstuhl ChoirSet, VocalSet; CC BY 4.0) into branch `test-vocals`
+- [x] `KuralLab` (analyse / shift / bench / harmonize) + `eval_pitch.py`, `eval_shift.py`, `make_listening_page.py`
+- [x] Harmony planner + 16 checks; TD-PSOLA and phase vocoder + 8 checks; ATELIER tap baseline
+- [x] Shifter comparison on synthetic and stand-in material; TD-PSOLA used in the plugin
+- [x] HarmonyEngine (16 voices), plugin with 4 voices, harmony panel, voice lines on the screen, v2 parameters
+- [x] Stress test with harmonies: no allocation, bypass/harmonies-off bit-exact delayed, correct harmony notes
 
-## Remaining (next: Phase 3)
-- [ ] `KuralRender` offline tool (WAV → WAV through the real processor)
-- [ ] Real-vocal test set + baseline detector results on it
+## Current
+- [ ] Real-vocal test set: first successful workflow run, then detector baseline and shifter comparison on it
+- [ ] Owner: listening review (page) and DAW check in FL Studio, Cubase, Reaper (VALIDATION.md)
+
+## Remaining (Phase 3 wrap-up, then Phase 4)
+- [ ] Fixes from the listening review
 - [ ] Test that exercises the sub-multiple octave guard directly (it is covered only indirectly)
 - [ ] Transition labelling in the detector (frames straddling a note change)
-- [ ] PSOLA and phase-vocoder prototypes, comparison, selection
-- [ ] Harmony planner (scales, diatonic intervals, expression kept)
-- [ ] First voices, formant preservation, dry/wet, latency reporting + dry alignment
+- [ ] Unison/near-unison voices comb against the dry vocal (offset ≤ 1 period): handle with naturalisation (Phase 5)
+- [ ] Voices 5–16 in the interface and parameters (Phase 4)
 - [ ] Preset system (format with version field, factory protection, import/export)
 - [ ] Phases 4–10 per DEVELOPMENT_PLAN.md
 
@@ -33,3 +39,5 @@
 - Linux test builds need `CXXFLAGS="-DJUCE_USE_XRANDR=0 -DJUCE_USE_XINERAMA=0 -DJUCE_USE_XCURSOR=0 -DJUCE_USE_XRENDER=0 -DJUCE_USE_XSHM=0"` at configure time when the X11 extension headers are missing (JUCE's helper tool is built without the project's definitions).
 - Installer is not code-signed (SmartScreen warning on first run).
 - MIDI input is accepted and ignored until Phase 7.
+- Latency is 31 ms at 48 kHz (2 periods of 65 Hz); no low-latency mode yet.
+- Notes below ~65 Hz are shifted with clamped grains (artifacts on very low bass notes).

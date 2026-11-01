@@ -7,8 +7,8 @@ vocals where audio is involved.
 | Phase | Deliverable | Status |
 |---|---|---|
 | 1. Research and foundation | Stable, recognisable Kural VST3 foundation | **Done; Windows CI green (build, tests, pluginval 10, installer); DAW check pending (manual)** |
-| 2. Core pitch engine | Reliable vocal analysis | **Implemented and tested on synthetic signals; real-vocal validation pending** |
-| 3. First harmony engine | Harmonizer with a few high-quality voices | Next |
+| 2. Core pitch engine | Reliable vocal analysis | **Implemented and tested on synthetic signals; real-vocal measurement in progress** |
+| 3. First harmony engine | Harmonizer with a few high-quality voices | **In progress (v0.2): 4 voices working in the plugin; listening review by the owner pending** |
 | 4. Expand to 16 voices | Working 16-voice engine, CPU benchmarked | Planned |
 | 5. Naturalness and voice differentiation | Convincing layered stacks | Planned |
 | 6. Creative processing | Modes, per-voice processing, stereo | Planned |
@@ -39,19 +39,28 @@ vocals where audio is involved.
   breathy, sibilant; different recording qualities); transition labelling; pitch-target smoothing
   for the harmony engine (designed in Phase 3 with the planner).
 
-## Phase 3 – next steps, in order
+## Phase 3 – status (v0.2.0)
 
-1. Build an offline render tool (`KuralRender`: WAV in → WAV out through the real processor) so every
-   DSP change can be listened to and measured on the same files.
-2. Assemble the real-vocal test set (user-provided recordings, or a dataset with a licence that
-   allows this use) and record baseline detector results on it.
-3. Prototype TD-PSOLA (pitch marks from the shared analysis) and a phase-vocoder shifter offline;
-   compare on the test set (intervals −12…+12, sustained/melismatic/breathy); pick per DSP_DESIGN.md.
-4. Harmony planner: key/scale, diatonic intervals in scale degrees, expression preserved.
-5. Two to four voices, formant preservation, dry/wet; latency measured and reported; dry delayed to
-   match.
-6. Register the parameters for exactly what exists (key, scale, voice on/interval/level/pan, mix).
-7. Listening review before moving to 16 voices.
+Done:
+1. `KuralLab` offline tool (framework-free): the real detector, shifters and full harmony engine
+   over WAV files (`analyse`, `shift`, `bench`, `harmonize`).
+2. Real-vocal test set: the `Fetch test vocals` workflow builds it from vocadito, Dagstuhl ChoirSet
+   and VocalSet (all CC BY 4.0) into the `test-vocals` branch with a manifest and attribution
+   (first run in progress).
+3. Three shifters built (TD-PSOLA, phase vocoder, ATELIER's rotating-tap baseline) and compared on
+   synthetic and stand-in material with `tools/eval/eval_shift.py`; TD-PSOLA is used in the plugin.
+   The comparison on real vocals follows once the test set exists.
+4. Harmony planner: 8 scale types + custom, scale-degree intervals, expression kept, vibrato-proof
+   note decisions.
+5. HarmonyEngine with up to 16 voices; 4 exposed (interval, octave, fine, formant, level, pan);
+   formants preserved; consonants unshifted at their own level; dry delayed by the reported latency.
+6. Parameters for exactly what exists (v2 IDs; voice IDs reserved to v16), harmony panel, voice lines
+   on the pitch screen.
+
+Remaining before Phase 4:
+7. **Listening review by the owner** (listening page with real vocals through each shifter and the
+   full harmony engine) and in a DAW (VALIDATION.md checklist).
+8. Fix what the listening review finds.
 
 ## Dependencies
 
@@ -63,6 +72,5 @@ vocals where audio is involved.
 
 ## Decisions needed from the owner
 
-- Real vocal recordings for testing (or approval of a public dataset).
+- Listening review of the shifter comparison and the harmonies (page linked from VALIDATION.md).
 - JUCE licensing for commercial sale; code signing for the installer (removes SmartScreen warning).
-- Whether ATELIER exists somewhere else (not found in the reachable repositories).
