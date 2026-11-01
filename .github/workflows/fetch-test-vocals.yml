@@ -12,6 +12,10 @@ on:
         description: "Only list the archive contents"
         type: boolean
         default: false
+      only:
+        description: "Datasets to (re)build, comma-separated (empty = all); the others already on test-vocals are kept"
+        type: string
+        default: ""
 
 permissions:
   contents: write
@@ -26,9 +30,15 @@ jobs:
       - name: Tools
         run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg
 
+      - name: Start from the current test-vocals branch (if any)
+        if: ${{ inputs.only != '' }}
+        run: |
+          git clone --depth 1 --branch test-vocals "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" "$RUNNER_TEMP/out" || mkdir -p "$RUNNER_TEMP/out"
+          rm -rf "$RUNNER_TEMP/out/.git"
+
       - name: Download, verify, select, convert
         run: |
-          python3 tools/testdata/fetch_vocals.py "$RUNNER_TEMP/dl" "$RUNNER_TEMP/out" ${{ inputs.survey && '--survey' || '' }}
+          python3 tools/testdata/fetch_vocals.py "$RUNNER_TEMP/dl" "$RUNNER_TEMP/out" ${{ inputs.survey && '--survey' || '' }} "--only=${{ inputs.only }}"
 
       - name: Commit to the test-vocals branch
         if: ${{ ! inputs.survey }}

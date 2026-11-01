@@ -6,8 +6,9 @@ verifies their MD5 checksums, selects a balanced subset, converts it to 16-bit m
 manifest.csv + ATTRIBUTION.md. The result is committed to the orphan branch `test-vocals` by
 .github/workflows/fetch-test-vocals.yml, so `main` stays small.
 
-usage: fetch_vocals.py <work dir> <out dir> [--survey]
+usage: fetch_vocals.py <work dir> <out dir> [--survey] [--only=vocadito,dcs,vocalset]
   --survey: only list the archive contents (to adapt the selection rules)
+  --only:   rebuild just these datasets; rows of the others already in <out dir>/manifest.csv are kept
 
 Datasets (all Creative Commons Attribution 4.0 International):
   vocadito         40 solo singing excerpts, f0 annotations         zenodo.org/record/5578807
@@ -111,7 +112,8 @@ def write_f0(rows, out_path, limit):
             w.writerow([f'{t:.5f}', f'{max(0.0, hz):.4f}'])
 
 
-def read_f0_csv(z, member):
+def read_f0_csv(z, member, min_conf=None):
+    """time, hz[, confidence]; with min_conf, frames below that confidence become unvoiced (CREPE)"""
     rows = []
     with z.open(member) as f:
         for line in f.read().decode('utf-8', 'replace').splitlines():
@@ -120,6 +122,12 @@ def read_f0_csv(z, member):
                 t, hz = float(parts[0]), float(parts[1])
             except (ValueError, IndexError):
                 continue          # header or blank
+            if min_conf is not None and len(parts) > 2:
+                try:
+                    if float(parts[2]) < min_conf:
+                        hz = 0.0
+                except ValueError:
+                    pass
             rows.append((t, hz))
     return rows
 
@@ -143,43 +151,53 @@ def select_vocadito(z, out, manifest):
                              f0_ref='f0/' + tid + '.csv', f0_ref_kind='vocadito annotation', source=a))
 
 
-def select_dcs(z, out, manifest, max_tracks=24):
+def select_dcs(z, out, manifest, max_manual=24, max_crepe=16):
+    """manual larynx-mic f0 where it exists; then CREPE on the larynx mic (confidence >= 0.5) for more
+    singers and parts, one track per singer. Audio from the headset mic (closest to a studio vocal),
+    else the handheld dynamic mic."""
     names = names_of(z)
-    manual = [n for n in names if re.search(r'manual', n, re.I) and n.lower().endswith('.csv') and 'lrx' in n.lower()]
     wavs = [n for n in names if n.lower().endswith('.wav')]
-    print(f'dcs: {len(manual)} manual LRX f0 files, {len(wavs)} wav files')
-    # prefer quartet takes (less bleed from the other singers), one track per singer/piece
-    manual.sort(key=lambda n: (0 if 'quartet' in n.lower() else 1, n))
-    picked, seen = 0, set()
-    for ref in manual:
+    manual = sorted((n for n in names if 'manual' in n.lower() and n.lower().endswith('.csv') and 'lrx' in n.lower()),
+                    key=lambda n: (0 if 'quartet' in n.lower() else 1, n))
+    crepe = sorted((n for n in names if 'crepe' in n.lower() and n.lower().endswith('_lrx.csv')),
+                   key=lambda n: (0 if 'quartet' in n.lower() else 1, n))
+    print(f'dcs: {len(manual)} manual LRX f0 files, {len(crepe)} CREPE LRX f0 files, {len(wavs)} wav files')
+    seen_singers = {m['singer'] for m in manifest if m['dataset'] == 'dcs'}
+
+    def take(ref, kind, min_conf):
         stem = os.path.splitext(os.path.basename(ref))[0]
         base = re.sub(r'_(LRX|HSM|DYN)$', '', re.sub(r'(?i)_?f0.*$', '', stem.replace('_manual', '')), flags=re.I)
-        part = re.search(r'_([SATB]\d)', base)
+        part = re.search(r'_([SATB]\d)$', base)
         piece = re.search(r'DCS_([A-Z]+)_', base)
-        key = (part.group(1) if part else base, piece.group(1) if piece else '')
-        if key in seen:
-            continue
-        audio = None
-        for mic in ('HSM', 'DYN', 'LRX'):
-            cand = [w for w in wavs if os.path.basename(w).startswith(base) and re.search(mic, os.path.basename(w), re.I)]
+        singer = (part.group(1) if part else base) + '_' + (piece.group(1) if piece else '')
+        if singer in seen_singers:
+            return False
+        audio = used = None
+        for mic in ('HSM', 'DYN'):
+            cand = [w for w in wavs if os.path.basename(w).startswith(base + '_' + mic)]
             if cand:
                 audio, used = cand[0], mic
                 break
         if audio is None:
-            print('  no audio for', ref)
-            continue
-        seen.add(key)
+            return False
+        seen_singers.add(singer)
         tid = 'dcs_' + base.replace('DCS_', '')
         sr, dur = to_flac(z, audio, os.path.join(out, 'audio', tid + '.flac'), MAX_SECONDS)
-        write_f0(read_f0_csv(z, ref), os.path.join(out, 'f0', tid + '.csv'), dur)
-        voice = {'S': 'soprano', 'A': 'alto', 'T': 'tenor', 'B': 'bass'}.get(key[0][0], '')
-        manifest.append(dict(id=tid, dataset='dcs', singer=key[0], voice=voice, technique='choral singing',
-                             context='quartet' if 'quartet' in audio.lower() else 'full choir', mic=used,
-                             sr=sr, seconds=f'{dur:.2f}', f0_ref='f0/' + tid + '.csv',
-                             f0_ref_kind='manual, larynx microphone', source=audio))
-        picked += 1
-        if picked >= max_tracks:
-            break
+        write_f0(read_f0_csv(z, ref, min_conf), os.path.join(out, 'f0', tid + '.csv'), dur)
+        voice = {'S': 'soprano', 'A': 'alto', 'T': 'tenor', 'B': 'bass'}.get(singer[0], '')
+        ctx = 'quartet' if 'quartet' in audio.lower() else 'section' if re.search(r'(basses|tenors|altos|sopranos)', audio, re.I) else 'full choir'
+        manifest.append(dict(id=tid, dataset='dcs', singer=singer, voice=voice, technique='choral singing', context=ctx,
+                             mic=used, sr=sr, seconds=f'{dur:.2f}', f0_ref='f0/' + tid + '.csv', f0_ref_kind=kind, source=audio))
+        return True
+
+    n = 0
+    for ref in manual:
+        if n < max_manual and take(ref, 'manual, larynx microphone', None):
+            n += 1
+    n = 0
+    for ref in crepe:
+        if n < max_crepe and take(ref, 'CREPE on larynx microphone (confidence >= 0.5)', 0.5):
+            n += 1
 
 
 VS_TECH = ['straight', 'vibrato', 'breathy', 'belt', 'vocal_fry', 'spoken', 'fast_forte', 'lip_trill', 'messa']
@@ -192,10 +210,11 @@ def select_vocalset(z, out, manifest):
     by = defaultdict(list)
     for w in wavs:
         parts = w.split('/')
-        singer = next((p for p in parts if re.fullmatch(r'[mf]\d+', p)), None)
-        if singer is None:
+        sm = next((re.fullmatch(r'(female|male)(\d+)', p) for p in parts if re.fullmatch(r'(female|male)\d+', p)), None)
+        if sm is None:
             continue
-        low = w.lower()
+        singer = ('f' if sm.group(1) == 'female' else 'm') + sm.group(2)
+        low = w.lower().replace('/vibrado', '/vibrato')          # one folder in VocalSet is spelt "vibrado"
         tech = next((t for t in VS_TECH if f'/{t}' in low or f'_{t}' in low), None)
         if tech is None:
             continue
@@ -236,16 +255,24 @@ def attribution(out, manifest):
 def main():
     work, out = sys.argv[1], sys.argv[2]
     only_survey = '--survey' in sys.argv
+    only = next((a.split('=', 1)[1].split(',') for a in sys.argv if a.startswith('--only=') and a.split('=', 1)[1]), list(DATASETS))
     os.makedirs(work, exist_ok=True)
     os.makedirs(os.path.join(out, 'audio'), exist_ok=True)
     os.makedirs(os.path.join(out, 'f0'), exist_ok=True)
+    # append mode: rows (and files) of datasets not rebuilt this time are kept
     manifest = []
-    zips = {key: download(work, key) for key in DATASETS}
+    mpath = os.path.join(out, 'manifest.csv')
+    if os.path.exists(mpath):
+        manifest = [r for r in csv.DictReader(open(mpath)) if r['dataset'] not in only]
+        print(f'keeping {len(manifest)} existing tracks from', sorted({r["dataset"] for r in manifest}))
+    zips = {key: download(work, key) for key in DATASETS if key in only}
     for key, z in zips.items():
         survey(z, key)
     failed = []
     if not only_survey:
         for key, sel in (('vocadito', select_vocadito), ('dcs', select_dcs), ('vocalset', select_vocalset)):
+            if key not in only:
+                continue
             n0 = len(manifest)
             try:
                 sel(zips[key], out, manifest)
