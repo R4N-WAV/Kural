@@ -24,6 +24,17 @@ juce::StringArray kural::scaleNames()
     return s;
 }
 
+juce::StringArray kural::mutateRatioNames()
+{
+    juce::StringArray a;
+    for (auto* t : { "\xc2\xbd\xc3\x97", "\xc2\xbe\xc3\x97", "1\xc3\x97", "1\xc2\xbd\xc3\x97", "2\xc3\x97", "3\xc3\x97", "5\xc3\x97" })
+        a.add (juce::String (juce::CharPointer_UTF8 (t)));     // ½× ¾× 1× 1½× 2× 3× 5×
+    return a;
+}
+float kural::mutateRatioValue (int i) { const float v[] = { 0.5f, 0.75f, 1.0f, 1.5f, 2.0f, 3.0f, 5.0f }; return v[juce::jlimit (0, 6, i)]; }
+juce::StringArray kural::delaySyncNames() { return { "Free", "1/16", "1/8", "1/8 dotted", "1/4", "1/4 dotted", "1/2", "1 bar" }; }
+double kural::delaySyncBeats (int i) { const double b[] = { 0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 4.0 }; return b[juce::jlimit (0, 7, i)]; }
+
 juce::AudioProcessorValueTreeState::ParameterLayout kural::createParameterLayout()
 {
     using namespace juce;
@@ -93,6 +104,52 @@ juce::AudioProcessorValueTreeState::ParameterLayout kural::createParameterLayout
     p.push_back (pct (ids::flexTune, "Flex-Tune", 0.0f));
     p.push_back (semis (ids::leadPitch, "Lead Pitch", -24.0f, 24.0f));
     p.push_back (semis (ids::leadFormant, "Lead Formant", -12.0f, 12.0f));
+
+    // ---- v4: naturalness, duet, effects
+    auto pct4 = [&] (const String& id, const String& name, float def, float hi = 100.0f)
+    {
+        return std::make_unique<AudioParameterFloat> (ParameterID { id, 4 }, name, NormalisableRange<float> (0.0f, hi, 1.0f), def,
+                                                      AudioParameterFloatAttributes().withLabel ("%")
+                                                          .withStringFromValueFunction ([] (float v, int) { return String (roundToInt (v)) + " %"; })
+                                                          .withValueFromStringFunction (num));
+    };
+    auto db4 = [&] (const String& id, const String& name, float lo, float hi, float def)
+    {
+        return std::make_unique<AudioParameterFloat> (ParameterID { id, 4 }, name, NormalisableRange<float> (lo, hi, 0.1f), def,
+                                                      AudioParameterFloatAttributes().withLabel ("dB").withStringFromValueFunction (db)
+                                                          .withValueFromStringFunction (num));
+    };
+    auto unit4 = [&] (const String& id, const String& name, float lo, float hi, float def, float skewCentre, const String& unit)
+    {
+        NormalisableRange<float> r (lo, hi, 1.0f);
+        r.setSkewForCentre (skewCentre);
+        return std::make_unique<AudioParameterFloat> (ParameterID { id, 4 }, name, r, def,
+                                                      AudioParameterFloatAttributes().withLabel (unit)
+                                                          .withStringFromValueFunction ([unit] (float v, int) { return String (roundToInt (v)) + " " + unit; })
+                                                          .withValueFromStringFunction (num));
+    };
+    p.push_back (pct4 (ids::naturalness, "Naturalness", 30.0f));
+    p.push_back (std::make_unique<AudioParameterBool> (ParameterID { ids::duetOn, 4 }, "Duet", false));
+    p.push_back (db4 (ids::duetLevel, "Duet Level", -30.0f, 6.0f, -3.0f));
+    p.push_back (pct4 (ids::duetSpread, "Duet Spread", 50.0f));
+    p.push_back (unit4 (ids::eqLowCut, "Low Cut", 20.0f, 400.0f, 20.0f, 100.0f, "Hz"));
+    p.push_back (db4 (ids::eqPresence, "Presence", -9.0f, 9.0f, 0.0f));
+    p.push_back (db4 (ids::eqAir, "Air", -9.0f, 9.0f, 0.0f));
+    p.push_back (pct4 (ids::compAmount, "Compression", 0.0f));
+    p.push_back (pct4 (ids::tubeDrive, "Tube", 0.0f));
+    p.push_back (std::make_unique<AudioParameterBool> (ParameterID { ids::mutateOn, 4 }, "Mutate", false));
+    p.push_back (std::make_unique<AudioParameterChoice> (ParameterID { ids::mutateRatio, 4 }, "Mutate Ratio", mutateRatioNames(), 3));
+    p.push_back (pct4 (ids::mutateMix, "Mutate Mix", 50.0f));
+    p.push_back (pct4 (ids::delayMix, "Delay", 0.0f));
+    p.push_back (unit4 (ids::delayTime, "Delay Time", 10.0f, 2000.0f, 300.0f, 300.0f, "ms"));
+    p.push_back (std::make_unique<AudioParameterChoice> (ParameterID { ids::delaySync, 4 }, "Delay Sync", delaySyncNames(), 4));
+    p.push_back (pct4 (ids::delayFeedback, "Delay Feedback", 30.0f, 95.0f));
+    p.push_back (std::make_unique<AudioParameterBool> (ParameterID { ids::delayPingPong, 4 }, "Ping-Pong", true));
+    p.push_back (pct4 (ids::reverbMix, "Reverb", 0.0f));
+    p.push_back (pct4 (ids::reverbSize, "Reverb Size", 50.0f));
+    p.push_back (pct4 (ids::reverbDecay, "Reverb Decay", 45.0f));
+    p.push_back (pct4 (ids::reverbDamping, "Reverb Damping", 50.0f));
+    p.push_back (pct4 (ids::width, "Width", 100.0f, 200.0f));
 
     // ---- v2: voices 1–4
     struct Default { bool on; int interval; int octave; float pan; };

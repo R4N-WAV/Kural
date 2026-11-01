@@ -12,6 +12,7 @@
 // Plain C++17: prepare() allocates, process() is real-time safe and bounded.
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include "Harmony.h"
 #include "PitchCorrector.h"
 #include "PitchDetector.h"
@@ -34,6 +35,18 @@ struct HarmonyEngineParams
     float unvoicedGain = 0.3f;       // consonants and breaths in the harmonies (0 … 1)
     float glideMs = 30.0f;
     float harmonyGain = 1.0f;        // linear, all voices
+    // naturalness (0 … 1): every harmony voice gets its own slow pitch drift (up to ±9 cents) and its
+    // own small timing offset (5 … 25 ms), from deterministic per-voice random walks, so a stack sounds
+    // like several singers rather than copies of one. 0 = exact copies.
+    float naturalness = 0.3f;
+};
+
+// Duet: one more copy of the (corrected) lead, loosely timed and slightly detuned, beside it
+struct DuetParams
+{
+    bool on = false;
+    float gain = 0.7f;               // linear
+    float spread = 0.5f;             // 0 … 1: timing, detune and stereo distance from the lead
 };
 
 struct LeadParams
@@ -57,6 +70,7 @@ public:
     void setParams (const HarmonyEngineParams& p) noexcept { params = p; planner.setScale (p.scale); }
     void setLead (const LeadParams& p) noexcept { lead = p; corrector.setParams (p.tune); }
     void setVoice (int index, const HarmonyVoiceParams& v) noexcept { if (index >= 0 && index < maxVoices) voiceParams[(size_t) index] = v; }
+    void setDuet (const DuetParams& d) noexcept { duet = d; }
 
     // mono in, harmonies added to outL/outR (which may be the caller's buffers, already holding dry);
     // leadOut (optional, mono) receives the processed lead, or zeros while the lead is not active
@@ -85,9 +99,22 @@ public:
                 if (! st.running) { voices[(size_t) v].reset (marker); st.running = true; }
                 st.fade += (target - st.fade) * fadeCoef;
                 if (! vp.on && st.fade < 1.0e-4f) st.fade = 0.0f;
-                const float y = voices[(size_t) v].next (marker) * st.fade * params.harmonyGain;
+                const float y = humanDelay (st, voices[(size_t) v].next (marker)) * st.fade * params.harmonyGain;
                 st.gainL += (st.panL * vp.gain - st.gainL) * smoothCoef;
                 st.gainR += (st.panR * vp.gain - st.gainR) * smoothCoef;
+                l += y * st.gainL;
+                r += y * st.gainR;
+            }
+            // duet: a second singer on the lead's line
+            if (duet.on || duetState.fade > 0.0f)
+            {
+                auto& st = duetState;
+                if (! st.running) { duetVoice.reset (marker); st.running = true; }
+                st.fade += ((duet.on ? 1.0f : 0.0f) - st.fade) * fadeCoef;
+                if (! duet.on && st.fade < 1.0e-4f) { st.fade = 0.0f; st.running = false; }
+                const float y = humanDelay (st, duetVoice.next (marker)) * st.fade * duet.gain;
+                st.gainL += (st.panL - st.gainL) * smoothCoef;
+                st.gainR += (st.panR - st.gainR) * smoothCoef;
                 l += y * st.gainL;
                 r += y * st.gainR;
             }
@@ -128,8 +155,34 @@ private:
         bool running = false;
         float fade = 0.0f, shift = 0.0f;
         float panL = 0.7071f, panR = 0.7071f, gainL = 0.0f, gainR = 0.0f;
+        // naturalness: random walks for drift (cents) and timing (ms), and the voice's own delay line
+        std::uint32_t rng = 1;
+        float driftTarget = 0.0f, drift = 0.0f, timeTarget = 0.0f, timeMs = 0.0f, walkLeft = 0.0f;
+        std::array<float, 8192> delay {};          // 25 ms at up to 192 kHz
+        int w = 0;
+        float delaySmp = 0.0f;
     };
     std::array<VoiceState, maxVoices> state {};
+    VoiceState duetState;
+    PsolaVoice duetVoice;
+    DuetParams duet;
+
+    void walk (VoiceState&, float dt, float amount, float baseMs, float rangeMs, float cents) noexcept;
+    float humanDelay (VoiceState& st, float x) noexcept
+    {
+        // fractional read from the voice's own delay line; the delay glides (a few samples per frame)
+        st.delay[(size_t) st.w] = x;
+        const float d = std::min (st.delaySmp, (float) st.delay.size() - 4.0f);
+        const float pos = (float) st.w - d;
+        const int i0 = (int) std::floor (pos);
+        const float t = pos - (float) i0;
+        const int m = (int) st.delay.size() - 1;
+        const float y = st.delay[(size_t) (i0 & m)] * (1.0f - t) + st.delay[(size_t) ((i0 + 1) & m)] * t;
+        st.w = (st.w + 1) & m;
+        st.delaySmp += (st.timeMs * 0.001f * (float) fs - st.delaySmp) * delayGlide;
+        return y;
+    }
+    float delayGlide = 0.0f;
     double fs = 48000.0;
     float fadeCoef = 0.0f, smoothCoef = 0.0f, hopSec = 0.005f;
     float lastLead = 0.0f;

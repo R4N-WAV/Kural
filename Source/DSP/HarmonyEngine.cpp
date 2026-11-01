@@ -11,6 +11,8 @@ void HarmonyEngine::prepare (double sampleRate, float minHz)
     marker.prepare (fs, minHz);
     for (auto& v : voices) v.prepare (marker);
     leadVoice.prepare (marker);
+    duetVoice.prepare (marker);
+    delayGlide = 1.0f - (float) std::exp (-1.0 / (0.25 * fs));       // timing changes glide over ~250 ms
     fadeCoef = 1.0f - (float) std::exp (-1.0 / (0.010 * fs));
     smoothCoef = 1.0f - (float) std::exp (-1.0 / (0.020 * fs));
     hopSec = detector.config().hopMs * 0.001f;
@@ -23,7 +25,14 @@ void HarmonyEngine::reset()
     marker.reset();
     planner.reset();
     for (auto& v : voices) v.reset (marker);
-    for (auto& s : state) s = VoiceState {};
+    for (int v = 0; v < maxVoices; ++v)
+    {
+        state[(size_t) v] = VoiceState {};
+        state[(size_t) v].rng = 0x9E3779B9u * (std::uint32_t) (v + 1);   // fixed seeds: renders repeat exactly
+    }
+    duetState = VoiceState {};
+    duetState.rng = 0xA5A5F00Du;
+    duetVoice.reset (marker);
     corrector.reset();
     leadVoice.reset (marker);
     leadRunning = false;
@@ -54,6 +63,26 @@ void HarmonyEngine::handleFrame (const PitchFrame& f) noexcept
     updateVoiceSettings();
 }
 
+void HarmonyEngine::walk (VoiceState& st, float dt, float amount, float baseMs, float rangeMs, float cents) noexcept
+{
+    // every 0.4 … 1.2 s a new random target; drift and timing ease towards it
+    st.walkLeft -= dt;
+    if (st.walkLeft <= 0.0f)
+    {
+        auto rnd = [&st]
+        {
+            st.rng ^= st.rng << 13; st.rng ^= st.rng >> 17; st.rng ^= st.rng << 5;
+            return (float) (st.rng & 0xFFFFFF) / (float) 0xFFFFFF;            // 0 … 1
+        };
+        st.driftTarget = 2.0f * rnd() - 1.0f;
+        st.timeTarget = rnd();
+        st.walkLeft = 0.4f + 0.8f * rnd();
+    }
+    const float k = 1.0f - std::exp (-dt / 0.5f);
+    st.drift += (st.driftTarget * cents * amount - st.drift) * k;
+    st.timeMs += ((baseMs + rangeMs * st.timeTarget) * amount - st.timeMs) * k;
+}
+
 void HarmonyEngine::updateVoiceSettings() noexcept
 {
     // the lead: correction + transpose; consonants pass at full level (it is the main vocal), the
@@ -80,8 +109,17 @@ void HarmonyEngine::updateVoiceSettings() noexcept
         const float p = std::clamp (vp.pan, -1.0f, 1.0f);
         st.panL = std::cos ((p + 1.0f) * 0.25f * 3.14159265f);     // constant power
         st.panR = std::sin ((p + 1.0f) * 0.25f * 3.14159265f);
-        // harmonies follow the corrected lead
-        voices[(size_t) v].set ({ st.shift + corr, vp.formantSemis, params.unvoicedGain, params.glideMs });
+        // harmonies follow the corrected lead; naturalness adds each voice's own drift and timing
+        walk (st, hopSec, std::clamp (params.naturalness, 0.0f, 1.0f), 5.0f, 20.0f, 9.0f);
+        voices[(size_t) v].set ({ st.shift + corr + 0.01f * st.drift, vp.formantSemis, params.unvoicedGain, params.glideMs });
     }
+
+    // duet: the lead's line, detuned a little and loosely timed (always some, spread scales it)
+    const float sp = std::clamp (duet.spread, 0.0f, 1.0f);
+    walk (duetState, hopSec, 0.3f + 0.7f * sp, 12.0f, 25.0f, 12.0f);
+    const float dp = 0.25f + 0.6f * sp;                                     // to the right of the lead
+    duetState.panL = std::cos ((dp + 1.0f) * 0.25f * 3.14159265f);
+    duetState.panR = std::sin ((dp + 1.0f) * 0.25f * 3.14159265f);
+    duetVoice.set ({ leadSemis + 0.01f * duetState.drift + 0.06f * sp, lead.formantSemis + 0.3f * sp, 0.6f, 20.0f });
 }
 } // namespace kural::dsp

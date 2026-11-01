@@ -21,12 +21,13 @@ add_library(KuralDsp STATIC
     Source/DSP/Psola.cpp
     Source/DSP/PhaseVocoder.cpp
     Source/DSP/PitchCorrector.cpp
+    Source/DSP/Fx.cpp
     Source/DSP/HarmonyEngine.cpp)
 target_include_directories(KuralDsp PUBLIC Source)
 
 option(KURAL_BUILD_TESTS "Build the DSP unit tests" ON)
 if(KURAL_BUILD_TESTS)
-    add_executable(KuralDspTests Tests/DspTests.cpp Tests/PitchTests.cpp Tests/HarmonyTests.cpp Tests/ShifterTests.cpp Tests/CorrectionTests.cpp)
+    add_executable(KuralDspTests Tests/DspTests.cpp Tests/PitchTests.cpp Tests/HarmonyTests.cpp Tests/ShifterTests.cpp Tests/CorrectionTests.cpp Tests/FxTests.cpp)
     target_include_directories(KuralDspTests PRIVATE Tests)
     target_link_libraries(KuralDspTests PRIVATE KuralDsp)
 

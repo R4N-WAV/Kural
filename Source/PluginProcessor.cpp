@@ -17,6 +17,15 @@ KuralProcessor::KuralProcessor()
     pTuneVibrato = raw (ids::tuneVibrato); pHumanize = raw (ids::humanize);
     pFlex = raw (ids::flexTune);           pLeadPitch = raw (ids::leadPitch);
     pLeadFormant = raw (ids::leadFormant);
+    pNatural = raw (ids::naturalness);     pDuetOn = raw (ids::duetOn);
+    pDuetLevel = raw (ids::duetLevel);     pDuetSpread = raw (ids::duetSpread);
+    pLowCut = raw (ids::eqLowCut);         pPresence = raw (ids::eqPresence);   pAir = raw (ids::eqAir);
+    pComp = raw (ids::compAmount);         pTube = raw (ids::tubeDrive);
+    pMutOn = raw (ids::mutateOn);          pMutRatio = raw (ids::mutateRatio);  pMutMix = raw (ids::mutateMix);
+    pDlyMix = raw (ids::delayMix);         pDlyTime = raw (ids::delayTime);     pDlySync = raw (ids::delaySync);
+    pDlyFb = raw (ids::delayFeedback);     pDlyPing = raw (ids::delayPingPong);
+    pRvbMix = raw (ids::reverbMix);        pRvbSize = raw (ids::reverbSize);    pRvbDecay = raw (ids::reverbDecay);
+    pRvbDamp = raw (ids::reverbDamping);   pWidth = raw (ids::width);
     for (int v = 0; v < registeredVoices; ++v)
         pVoice[(size_t) v] = { raw (ids::voiceId (v, "on")), raw (ids::voiceId (v, "mode")), raw (ids::voiceId (v, "interval")),
                                raw (ids::voiceId (v, "semis")), raw (ids::voiceId (v, "octave")), raw (ids::voiceId (v, "cents")),
@@ -41,6 +50,9 @@ void KuralProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     harmL.assign ((size_t) maxBlock, 0.0f);
     harmR.assign ((size_t) maxBlock, 0.0f);
     leadBuf.assign ((size_t) maxBlock, 0.0f);
+    fxL.assign ((size_t) maxBlock, 0.0f);
+    fxR.assign ((size_t) maxBlock, 0.0f);
+    eq.prepare (fs); comp.prepare (fs); tube.prepare (fs); mutate.prepare (fs); delay.prepare (fs, 2100.0f); reverb.prepare (fs);
 
     engine.prepare (fs);
     latency = engine.latency();
@@ -58,6 +70,8 @@ void KuralProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     dryGain.setCurrentAndTargetValue (juce::Decibels::decibelsToGain (pDryLevel->load(), -59.9f));
     wetMix.setCurrentAndTargetValue (pBypass->load() > 0.5f ? 0.0f : 1.0f);
     readParameters();
+    eq.reset(); comp.reset(); tube.reset(); mutate.reset(); delay.reset(); reverb.reset();
+    widthS = pWidth->load() * 0.01f;
     leadMix.setCurrentAndTargetValue (engine.leadActive() ? 1.0f : 0.0f);
 
     fifo.reset();
@@ -75,6 +89,7 @@ void KuralProcessor::readParameters() noexcept
     ep.unvoicedGain = pConsonants->load() * 0.01f;
     ep.glideMs = pGlide->load();
     ep.harmonyGain = pHarmOn->load() > 0.5f ? juce::Decibels::decibelsToGain (pHarmLevel->load(), -59.9f) : 0.0f;
+    ep.naturalness = pNatural->load() * 0.01f;
     engine.setParams (ep);
     LeadParams lp;
     lp.tune.on = pTuneOn->load() > 0.5f;
@@ -86,6 +101,22 @@ void KuralProcessor::readParameters() noexcept
     lp.transposeSemis = pLeadPitch->load();
     lp.formantSemis = pLeadFormant->load();
     engine.setLead (lp);
+    DuetParams dp;
+    dp.on = pDuetOn->load() > 0.5f;
+    dp.gain = juce::Decibels::decibelsToGain (pDuetLevel->load());
+    dp.spread = pDuetSpread->load() * 0.01f;
+    engine.setDuet (dp);
+
+    // effects
+    using namespace kural::dsp::fx;
+    eq.set ({ pLowCut->load(), pPresence->load(), pAir->load() });
+    comp.set ({ pComp->load() * 0.01f });
+    tube.set ({ pTube->load() * 0.01f, 1.0f });
+    mutate.set ({ pMutOn->load() > 0.5f, kural::mutateRatioValue ((int) pMutRatio->load()), 0.0f, pMutMix->load() * 0.01f });
+    const double beats = kural::delaySyncBeats ((int) pDlySync->load());
+    const float dlyMs = beats > 0.0 ? (float) (beats * 60000.0 / juce::jlimit (30.0, 300.0, bpm)) : pDlyTime->load();
+    delay.set ({ juce::jmin (dlyMs, 2000.0f), pDlyFb->load() * 0.01f, pDlyMix->load() * 0.01f, pDlyPing->load() > 0.5f, 6500.0f });
+    reverb.set ({ pRvbSize->load() * 0.01f, pRvbDecay->load() * 0.01f, pRvbDamp->load() * 0.01f, pRvbMix->load() * 0.01f, 18.0f, 1.0f });
     for (int v = 0; v < kural::registeredVoices; ++v)
     {
         const auto& p = pVoice[(size_t) v];
@@ -118,6 +149,9 @@ void KuralProcessor::processBlockBypassed (juce::AudioBuffer<float>& buffer, juc
 void KuralProcessor::process (juce::AudioBuffer<float>& buffer, bool bypassedByHost)
 {
     juce::ScopedNoDenormals noDenormals;
+    if (auto* ph = getPlayHead())
+        if (auto pos = ph->getPosition())
+            if (auto b = pos->getBpm()) bpm = *b;
     readParameters();
     const int n = buffer.getNumSamples();
     // a host may send more samples than announced in prepareToPlay: work in announced-size pieces
@@ -161,24 +195,57 @@ void KuralProcessor::processChunk (juce::AudioBuffer<float>& buffer, int start, 
     dryGain.setTargetValue (juce::Decibels::decibelsToGain (pDryLevel->load(), -59.9f));
     wetMix.setTargetValue (bypass ? 0.0f : 1.0f);
     leadMix.setTargetValue (engine.leadActive() ? 1.0f : 0.0f);
+    // the dry (delayed) input, and the processed signal: lead (dry or tuned) + harmonies, then effects
+    float* d0s = mono.data();                 // reused: the mono sum is no longer needed
     for (int i = 0; i < n; ++i)
     {
         const int w = dryPos;
         const int r = (dryPos - latency) & dryMask;
-        float in0 = useIn > 0 ? buffer.getSample (0, start + i) : 0.0f;
-        float in1 = useIn > 1 ? buffer.getSample (1, start + i) : in0;
+        const float in0 = useIn > 0 ? buffer.getSample (0, start + i) : 0.0f;
+        const float in1 = useIn > 1 ? buffer.getSample (1, start + i) : in0;
         dryRing[0][(size_t) w] = in0;
         dryRing[1][(size_t) w] = in1;
         dryPos = (dryPos + 1) & dryMask;
         const float d0 = dryRing[0][(size_t) r], d1 = dryRing[1][(size_t) r];
-        const float og = outGain.getNextValue(), dg = dryGain.getNextValue(), wm = wetMix.getNextValue();
+        const float dg = dryGain.getNextValue();
         // the lead: the dry vocal, or the processed (tuned / transposed) lead in its place (mono,
         // centred), crossfaded when switched; both are delayed by the same latency
         const float lm = leadMix.getNextValue();
         const float l0 = lm <= 0.0f ? d0 : d0 + (leadBuf[(size_t) i] - d0) * lm;
         const float l1 = lm <= 0.0f ? d1 : d1 + (leadBuf[(size_t) i] - d1) * lm;
-        const float p0 = (l0 * dg + harmL[(size_t) i]) * og;
-        const float p1 = (l1 * dg + harmR[(size_t) i]) * og;
+        fxL[(size_t) i] = l0 * dg + harmL[(size_t) i];
+        fxR[(size_t) i] = l1 * dg + harmR[(size_t) i];
+        d0s[i] = d0;
+        leadBuf[(size_t) i] = d1;             // reused: delayed dry, right
+    }
+    float* fr = useOut > 1 ? fxR.data() : nullptr;
+    if (engine.leadVoiced()) mutate.setPitch (kural::dsp::midiToHz (engine.leadMidi()));
+    eq.process (fxL.data(), fr, n);
+    comp.process (fxL.data(), fr, n);
+    tube.process (fxL.data(), fr, n);
+    mutate.process (fxL.data(), fr, n);
+    delay.process (fxL.data(), fr, n);
+    reverb.process (fxL.data(), fr, n);
+    if (fr != nullptr)
+    {
+        const float wt = pWidth->load() * 0.01f;
+        if (std::abs (wt - 1.0f) > 1e-3f || std::abs (widthS - 1.0f) > 1e-3f)
+            for (int i = 0; i < n; ++i)
+            {
+                widthS += (wt - widthS) * 0.001f;
+                const float m = 0.5f * (fxL[(size_t) i] + fxR[(size_t) i]), sd = 0.5f * (fxL[(size_t) i] - fxR[(size_t) i]) * widthS;
+                fxL[(size_t) i] = m + sd;
+                fxR[(size_t) i] = m - sd;
+            }
+        else widthS = wt;
+    }
+
+    for (int i = 0; i < n; ++i)
+    {
+        const float d0 = d0s[i], d1 = leadBuf[(size_t) i];
+        const float og = outGain.getNextValue(), wm = wetMix.getNextValue();
+        const float p0 = fxL[(size_t) i] * og;
+        const float p1 = (fr != nullptr ? fxR[(size_t) i] : fxL[(size_t) i]) * og;
         // bypassed: exactly the delayed input; switching crossfades so it never clicks
         const float o0 = wm >= 1.0f ? p0 : wm <= 0.0f ? d0 : d0 + (p0 - d0) * wm;
         const float o1 = wm >= 1.0f ? p1 : wm <= 0.0f ? d1 : d1 + (p1 - d1) * wm;

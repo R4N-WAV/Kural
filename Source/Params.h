@@ -27,6 +27,29 @@ inline constexpr auto humanize = "humanize";       // %, slower correction on he
 inline constexpr auto flexTune = "flexTune";       // %, only correct notes the singer is close to
 inline constexpr auto leadPitch = "leadPitch";     // lead transpose, semitones
 inline constexpr auto leadFormant = "leadFormant"; // lead formant shift, semitones (0 = preserved)
+// naturalness, duet, effects                                                                (v4)
+inline constexpr auto naturalness = "naturalness"; // %, per-voice drift and timing of the harmonies
+inline constexpr auto duetOn = "duetOn";
+inline constexpr auto duetLevel = "duetLevel";     // dB
+inline constexpr auto duetSpread = "duetSpread";   // %
+inline constexpr auto eqLowCut = "eqLowCut";       // Hz
+inline constexpr auto eqPresence = "eqPresence";   // dB
+inline constexpr auto eqAir = "eqAir";             // dB
+inline constexpr auto compAmount = "compAmount";   // %
+inline constexpr auto tubeDrive = "tubeDrive";     // %
+inline constexpr auto mutateOn = "mutateOn";
+inline constexpr auto mutateRatio = "mutateRatio"; // choice: carrier as a multiple of the lead's pitch
+inline constexpr auto mutateMix = "mutateMix";     // %
+inline constexpr auto delayMix = "delayMix";       // %
+inline constexpr auto delayTime = "delayTime";     // ms (when not synced)
+inline constexpr auto delaySync = "delaySync";     // choice: Free, note values
+inline constexpr auto delayFeedback = "delayFeedback"; // %
+inline constexpr auto delayPingPong = "delayPingPong";
+inline constexpr auto reverbMix = "reverbMix";     // %
+inline constexpr auto reverbSize = "reverbSize";   // %
+inline constexpr auto reverbDecay = "reverbDecay"; // %
+inline constexpr auto reverbDamping = "reverbDamping"; // %
+inline constexpr auto width = "width";             // %, stereo width of the output
 
 // per voice: "v01_on" etc.
 inline constexpr const char* voiceSuffixes[] = { "on", "mode", "interval", "semis", "octave", "cents", "formant", "level", "pan" };
@@ -42,5 +65,9 @@ inline constexpr int intervalChoices = 13;   // "7th below" … "Unison" … "7t
 juce::StringArray intervalNames();
 juce::StringArray keyNames();
 juce::StringArray scaleNames();
+juce::StringArray mutateRatioNames();
+float mutateRatioValue (int index);
+juce::StringArray delaySyncNames();
+double delaySyncBeats (int index);      // 0 = free
 juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 }

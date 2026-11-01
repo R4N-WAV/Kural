@@ -2,6 +2,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <array>
 #include <atomic>
+#include "DSP/Fx.h"
 #include "DSP/HarmonyEngine.h"
 #include "Params.h"
 
@@ -74,7 +75,15 @@ private:
     double fs = 48000.0;
     int maxBlock = 512, latency = 0;
     kural::dsp::HarmonyEngine engine;
-    std::vector<float> mono, harmL, harmR, leadBuf;
+    std::vector<float> mono, harmL, harmR, leadBuf, fxL, fxR;
+    kural::dsp::fx::Eq eq;
+    kural::dsp::fx::Compressor comp;
+    kural::dsp::fx::Tube tube;
+    kural::dsp::fx::Mutate mutate;
+    kural::dsp::fx::Delay delay;
+    kural::dsp::fx::Reverb reverb;
+    float widthS = 1.0f;
+    double bpm = 120.0;
     std::array<std::vector<float>, 2> dryRing;
     int dryMask = 0, dryPos = 0;
     juce::SmoothedValue<float> outGain, wetMix, dryGain, leadMix;   // wetMix: 1 = processed, 0 = bypassed (crossfade)
@@ -83,7 +92,12 @@ private:
     std::atomic<float> *pOutput = nullptr, *pBypass = nullptr, *pKey = nullptr, *pScale = nullptr, *pHarmOn = nullptr,
                        *pHarmLevel = nullptr, *pDryLevel = nullptr, *pConsonants = nullptr, *pGlide = nullptr,
                        *pTuneOn = nullptr, *pRetune = nullptr, *pTuneVibrato = nullptr, *pHumanize = nullptr,
-                       *pFlex = nullptr, *pLeadPitch = nullptr, *pLeadFormant = nullptr;
+                       *pFlex = nullptr, *pLeadPitch = nullptr, *pLeadFormant = nullptr,
+                       *pNatural = nullptr, *pDuetOn = nullptr, *pDuetLevel = nullptr, *pDuetSpread = nullptr,
+                       *pLowCut = nullptr, *pPresence = nullptr, *pAir = nullptr, *pComp = nullptr, *pTube = nullptr,
+                       *pMutOn = nullptr, *pMutRatio = nullptr, *pMutMix = nullptr, *pDlyMix = nullptr, *pDlyTime = nullptr,
+                       *pDlySync = nullptr, *pDlyFb = nullptr, *pDlyPing = nullptr, *pRvbMix = nullptr, *pRvbSize = nullptr,
+                       *pRvbDecay = nullptr, *pRvbDamp = nullptr, *pWidth = nullptr;
     struct VoicePtrs { std::atomic<float> *on, *mode, *interval, *semis, *octave, *cents, *formant, *level, *pan; };
     std::array<VoicePtrs, kural::registeredVoices> pVoice {};
 

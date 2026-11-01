@@ -364,6 +364,32 @@ int main (int argc, char** argv)
                 juce::String::formatted ("tune toggled and lead pitch automated every block: finite, %ld allocs, peak %.2f", st.allocs, st.peak));
     }
 
+    // 6d. everything on: tune, duet, naturalness, every effect, with delay time, reverb and drive
+    //     automated every block at random sizes: finite, bounded, no allocation on the audio thread
+    for (double fsx : { 44100.0, 96000.0 })
+    {
+        KuralProcessor p;
+        for (auto [id, v] : std::initializer_list<std::pair<const char*, float>> {
+                 { kural::ids::tuneOn, 1.0f }, { kural::ids::duetOn, 1.0f }, { kural::ids::naturalness, 100.0f },
+                 { kural::ids::eqLowCut, 150.0f }, { kural::ids::eqPresence, 6.0f }, { kural::ids::eqAir, 6.0f },
+                 { kural::ids::compAmount, 80.0f }, { kural::ids::tubeDrive, 70.0f }, { kural::ids::mutateOn, 1.0f },
+                 { kural::ids::delayMix, 40.0f }, { kural::ids::delayFeedback, 90.0f }, { kural::ids::delaySync, 0.0f },
+                 { kural::ids::reverbMix, 50.0f }, { kural::ids::reverbDecay, 100.0f }, { kural::ids::width, 180.0f },
+                 { kural::ids::voiceId (2, "on").toRawUTF8(), 1.0f }, { kural::ids::voiceId (3, "on").toRawUTF8(), 1.0f } })
+            setParam (p, id, v);
+        p.prepareToPlay (fsx, 512);
+        juce::Random r (17);
+        auto st = run (p, { Signal::vocal, fsx }, secs, 512, true, 2, 2, [&] (int)
+        {
+            setParam (p, kural::ids::delayTime, 10.0f + 1990.0f * r.nextFloat());
+            setParam (p, kural::ids::reverbSize, 100.0f * r.nextFloat());
+            setParam (p, kural::ids::tubeDrive, 100.0f * r.nextFloat());
+            setParam (p, kural::ids::eqLowCut, 20.0f + 380.0f * r.nextFloat());
+        });
+        report (st.finite && st.allocs == 0 && st.peak < 4.0f,
+                juce::String::formatted ("%.1f kHz, every effect on and automated: finite, %ld allocs, peak %.2f", fsx / 1000.0, st.allocs, st.peak));
+    }
+
     // 7. state: save → restore round trip, and an older/partial state falls back to defaults
     {
         KuralProcessor a, b;
