@@ -1,0 +1,59 @@
+# Kural – Validation
+
+Only results that were actually run are recorded here. "Pending" means not yet done.
+
+## Test environments
+
+| Environment | Used for | Status |
+|---|---|---|
+| Linux x86-64 (Ubuntu 24.04, GCC 13.3, Xeon server core), development container | DSP tests, stress test, snapshots | Run 1 Nov 2026, see below |
+| GitHub Actions `windows-2022`, MSVC 2022, x64 | Release build, all tests, pluginval, installer install/uninstall on a clean machine | Pending first run |
+| GitHub Actions `ubuntu-24.04` | DSP tests on every push | Pending first run |
+| FL Studio / Cubase / Reaper on Windows 10/11 | Real host loading and use | **Pending (manual; no DAW in the build environment)** |
+
+## Automated results (Linux, 1 Nov 2026, version 0.1.0)
+
+- `KuralDspTests`: **28/28 pass** – figures in DSP_DESIGN.md §1.
+- `KuralStress` (full): **90/90 pass**:
+  - 44.1, 48, 88.2, 96, 176.4, 192 kHz × blocks of 1, 64, 512, 4096 (random sizes up to 2× the announced size) × layouts 1→1, 1→2, 2→2: finite output, **0 allocations/frees on the audio thread**, pitch frames produced.
+  - Hostile input (silence, DC, impulses, Nyquist, +18 dBFS, denormal-range): finite, no allocation.
+  - Output gain and bypass automated every block: no allocation, largest sample step 0.248 on a vocal-like signal (smoothing works).
+  - Bypass parameter and 0 dB: bit-exact pass-through, latency 0. Host bypass: crossfade with no jump (largest step 0.011), bit-exact after the fade.
+  - −6 dB measured as ×0.5012. Mono in on stereo out reaches both channels.
+  - State round trip; state version saved; older state with a missing parameter falls back to the default; garbage state ignored.
+  - Re-prepared at changing sample rates/block sizes: finite, no allocation.
+  - Editor created, resized and destroyed 5× (headless).
+- `KuralSnapshot`: editor rendered at 1× and 2×; Tamil logo குரல் shaped correctly (கு ligature, pulli on ல்); pitch line follows the synthetic phrase including glides, vibrato and gaps for the consonant and the breath.
+- Pitch detector CPU: 1.3–1.6 % of one core at 44.1–192 kHz.
+
+## Manual DAW checklist (pending)
+
+For each of FL Studio, Cubase, Reaper:
+- [ ] Installer runs; plugin appears after rescan, listed under R4N
+- [ ] Loads on a mono and on a stereo vocal track; audio passes; no clicks on insert/remove
+- [ ] Pitch display follows a sung vocal; gaps on consonants/breaths; no octave jumps on sustained notes
+- [ ] Output automation recorded and played back smoothly
+- [ ] Bypass (plugin button and host bypass) is click-free
+- [ ] Project saved, closed, reopened: settings restored
+- [ ] Sample-rate change (44.1 → 48 → 96 kHz) and buffer-size change while loaded
+- [ ] Window resize; Tamil logo rendered correctly on the user's Windows display scaling (100/150/200 %)
+- [ ] 1-hour session with transport start/stop: stable
+- MIDI routing: not applicable until Phase 7
+
+## Audio quality validation (pending – starts with Phase 3)
+
+Real-vocal set needed: low male, high male, female, falsetto, spoken, sustained, fast melodic,
+melisma, vibrato, breathy, strong sibilance, quiet, loud, different recording qualities.
+For each: detector accuracy against a hand-checked reference; once harmony exists: note selection,
+formant naturalness, consonant/breath handling, transitions, stereo/mono compatibility, artifacts
+(listening, A/B), latency (measured), CPU at 1/4/8/12/16 voices, memory, long-run stability.
+
+## Release criteria (Phase 10)
+
+All automated checks green on Windows CI; manual checklist passed in all three hosts; listening
+review signed off on the real-vocal set; measured latency and CPU documented; installer tested on a
+clean Windows 10 and 11 machine.
+
+## Known limitations
+
+See TODO.md "Known issues".

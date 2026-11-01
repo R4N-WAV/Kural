@@ -1,0 +1,343 @@
+// Robustness checks for the Kural processor (run in CI on Windows).
+// usage: KuralStress [quick]
+// Every check prints one line; the program exits non-zero if any check fails.
+//
+// Includes a real-time safety check: the global allocator is hooked and processBlock must not
+// allocate or free memory, at any sample rate, block size or channel layout.
+#include <juce_audio_utils/juce_audio_utils.h>
+#include "PluginProcessor.h"
+#include <atomic>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <new>
+
+// ---------------------------------------------------------------- allocation tracking
+// counted only on the thread that runs processBlock (JUCE's own timer/message threads may allocate
+// at the same time; that is normal and not what this checks)
+namespace
+{
+thread_local bool trackAllocs = false;
+std::atomic<long> allocsInAudio { 0 };
+}
+void* operator new (std::size_t n)
+{
+    if (trackAllocs) allocsInAudio.fetch_add (1, std::memory_order_relaxed);
+    if (void* p = std::malloc (n == 0 ? 1 : n)) return p;
+    throw std::bad_alloc();
+}
+void* operator new[] (std::size_t n) { return operator new (n); }
+void* operator new (std::size_t n, const std::nothrow_t&) noexcept
+{
+    if (trackAllocs) allocsInAudio.fetch_add (1, std::memory_order_relaxed);
+    return std::malloc (n == 0 ? 1 : n);
+}
+void* operator new[] (std::size_t n, const std::nothrow_t& t) noexcept { return operator new (n, t); }
+void operator delete (void* p) noexcept
+{
+    if (p != nullptr && trackAllocs) allocsInAudio.fetch_add (1, std::memory_order_relaxed);
+    std::free (p);
+}
+void operator delete[] (void* p) noexcept { operator delete (p); }
+void operator delete (void* p, std::size_t) noexcept { operator delete (p); }
+void operator delete[] (void* p, std::size_t) noexcept { operator delete (p); }
+
+namespace
+{
+int failures = 0;
+void report (bool ok, const juce::String& what)
+{
+    std::printf ("%s  %s\n", ok ? "ok  " : "FAIL", what.toRawUTF8());
+    if (! ok) ++failures;
+}
+
+void setParam (KuralProcessor& p, const char* id, float v)
+{
+    auto* prm = p.apvts.getParameter (id);
+    prm->setValueNotifyingHost (prm->convertTo0to1 (v));
+}
+
+bool setLayout (KuralProcessor& p, int in, int out)
+{
+    juce::AudioProcessor::BusesLayout l;
+    l.inputBuses.add (in == 1 ? juce::AudioChannelSet::mono() : juce::AudioChannelSet::stereo());
+    l.outputBuses.add (out == 1 ? juce::AudioChannelSet::mono() : juce::AudioChannelSet::stereo());
+    return p.setBusesLayout (l);
+}
+
+struct Signal
+{
+    enum Kind { vocal, silence, dc, impulse, nyquist, loud, tiny } kind;
+    double fs;
+    juce::Random rng { 11 };
+    double ph = 0;
+    long long t = 0;
+    float next()
+    {
+        const long long i = t++;
+        switch (kind)
+        {
+            case vocal:
+            {
+                // a sung line: harmonic tone with vibrato, gliding between notes, with breath gaps
+                const double sec = (double) i / fs;
+                const double f = 196.0 * std::pow (2.0, (std::floor (std::fmod (sec, 2.0) * 2.0) * 2.0) / 12.0)
+                                 * std::pow (2.0, 0.4 / 12.0 * std::sin (2.0 * juce::MathConstants<double>::pi * 5.5 * sec));
+                ph += 2.0 * juce::MathConstants<double>::pi * f / fs;
+                const bool breath = std::fmod (sec, 1.0) > 0.85;
+                const double tone = std::sin (ph) + 0.5 * std::sin (2 * ph) + 0.25 * std::sin (3 * ph);
+                return (float) (breath ? 0.02 * (rng.nextFloat() * 2.0 - 1.0) : 0.25 * tone);
+            }
+            case silence: return 0.0f;
+            case dc:      return 0.5f;
+            case impulse: return i % 24000 == 0 ? 1.0f : 0.0f;
+            case nyquist: return (i & 1) ? 1.0f : -1.0f;
+            case loud:    return (float) (8.0 * std::sin ((double) i * 0.05));     // +18 dBFS
+            case tiny:    return (float) (1.0e-30 * std::sin ((double) i * 0.05)); // denormal range
+        }
+        return 0.0f;
+    }
+};
+
+struct Stats { bool finite = true; float peak = 0.0f; long long n = 0; long allocs = 0; };
+
+Stats run (KuralProcessor& p, Signal sig, double seconds, int maxBlock, bool randomBlocks, int inCh, int outCh,
+           std::function<void (int)> perBlock = {}, std::vector<float>* captureL = nullptr)
+{
+    Stats st;
+    juce::Random rb (5);
+    const int chans = juce::jmax (inCh, outCh);
+    juce::AudioBuffer<float> buf (chans, maxBlock * 2 + 1);
+    juce::MidiBuffer midi;
+    midi.ensureSize (256);
+    const long long total = (long long) (seconds * sig.fs);
+    int block = 0;
+    for (long long done = 0; done < total; ++block)
+    {
+        int n = randomBlocks ? 1 + rb.nextInt (maxBlock * 2) : maxBlock;       // also larger than announced
+        n = (int) juce::jmin ((long long) n, total - done);
+        if (perBlock) perBlock (block);
+        buf.setSize (chans, n, false, false, true);
+        for (int i = 0; i < n; ++i)
+        {
+            const float v = sig.next();
+            for (int c = 0; c < chans; ++c) buf.setSample (c, i, c < inCh ? v : 0.0f);
+        }
+        midi.clear();
+        if (block % 7 == 0) midi.addEvent (juce::MidiMessage::noteOn (1, 60, (juce::uint8) 100), 0);
+        allocsInAudio.store (0);
+        trackAllocs = true;
+        p.processBlock (buf, midi);
+        trackAllocs = false;
+        st.allocs += allocsInAudio.load();
+        for (int c = 0; c < outCh; ++c)
+        {
+            const float* d = buf.getReadPointer (c);
+            for (int i = 0; i < n; ++i)
+            {
+                if (! std::isfinite (d[i])) st.finite = false;
+                st.peak = juce::jmax (st.peak, std::abs (d[i]));
+            }
+        }
+        if (captureL != nullptr)
+            for (int i = 0; i < n; ++i) captureL->push_back (buf.getSample (0, i));
+        done += n;
+        st.n += n;
+    }
+    return st;
+}
+} // namespace
+
+int main (int argc, char** argv)
+{
+    juce::ScopedJuceInitialiser_GUI gui;
+    const bool quick = argc > 1 && juce::String (argv[1]) == "quick";
+    const double secs = quick ? 1.5 : 6.0;
+
+    // 1. every sample rate × block-size pattern × layout: finite output, no allocation, frames produced
+    for (double fs : { 44100.0, 48000.0, 88200.0, 96000.0, 176400.0, 192000.0 })
+        for (int blk : { 1, 64, 512, 4096 })
+            for (auto [inCh, outCh] : { std::pair { 1, 1 }, std::pair { 1, 2 }, std::pair { 2, 2 } })
+            {
+                if (blk == 1 && fs > 96000.0 && quick) continue;
+                KuralProcessor p;
+                const bool ok = setLayout (p, inCh, outCh);
+                p.prepareToPlay (fs, blk);
+                auto st = run (p, { Signal::vocal, fs }, blk == 1 ? 0.5 : secs, blk, blk > 1, inCh, outCh);
+                std::vector<KuralProcessor::AnalysisFrame> fr (2048);
+                int total = 0, voiced = 0, k;
+                while ((k = p.popAnalysis (fr.data(), (int) fr.size())) > 0)
+                    for (int i = 0; i < k; ++i) { ++total; voiced += fr[(size_t) i].voicing == kural::dsp::Voicing::voiced; }
+                report (ok && st.finite && st.allocs == 0 && st.peak < 2.0f && total > 0 && voiced > total / 3,
+                        juce::String::formatted ("%6.1f kHz, block %4d %s, %d->%d ch: finite, %ld allocs on audio thread, %d frames (%d voiced)",
+                                                 fs / 1000.0, blk, blk > 1 ? "(random)" : "        ", inCh, outCh, st.allocs, total, voiced));
+            }
+
+    // 2. hostile signals stay finite; denormal-range input does not explode
+    {
+        const char* names[] = { "silence", "dc", "impulses", "nyquist", "+18 dBFS", "denormal-range" };
+        Signal::Kind kinds[] = { Signal::silence, Signal::dc, Signal::impulse, Signal::nyquist, Signal::loud, Signal::tiny };
+        for (int i = 0; i < 6; ++i)
+        {
+            KuralProcessor p;
+            p.prepareToPlay (48000.0, 256);
+            auto st = run (p, { kinds[i], 48000.0 }, secs, 256, true, 2, 2);
+            report (st.finite && st.allocs == 0, juce::String ("hostile input: ") + names[i]
+                                                     + juce::String::formatted (": finite %s, %ld allocs, peak %.2f", st.finite ? "yes" : "NO", st.allocs, st.peak));
+        }
+    }
+
+    // 3. automation every block (output gain and bypass) never produces a step > the smoothing allows
+    {
+        KuralProcessor p;
+        p.prepareToPlay (48000.0, 128);
+        juce::Random r (3);
+        std::vector<float> out;
+        Signal s { Signal::vocal, 48000.0 };
+        auto st = run (p, s, secs, 128, false, 2, 2, [&] (int b)
+        {
+            setParam (p, kural::ids::output, -24.0f + 36.0f * r.nextFloat());
+            if (b % 37 == 0) setParam (p, kural::ids::bypass, (b / 37) % 2 == 0 ? 1.0f : 0.0f);
+        }, &out);
+        // largest sample-to-sample jump vs. the input's own: smoothing keeps it bounded
+        float maxJump = 0.0f;
+        for (size_t i = 1; i < out.size(); ++i) maxJump = juce::jmax (maxJump, std::abs (out[i] - out[i - 1]));
+        report (st.finite && st.allocs == 0 && maxJump < 0.5f,
+                juce::String::formatted ("automation every block: finite, no allocation, largest step %.3f", maxJump));
+    }
+
+    // 4. bypass and 0 dB are bit-exact pass-through (latency is zero, nothing else touches the signal)
+    for (int mode = 0; mode < 2; ++mode)
+    {
+        KuralProcessor p;
+        p.prepareToPlay (48000.0, 512);
+        if (mode == 0) setParam (p, kural::ids::bypass, 1.0f); else setParam (p, kural::ids::output, 0.0f);
+        p.prepareToPlay (48000.0, 512);          // start settled (no crossfade in progress)
+        Signal a { Signal::vocal, 48000.0 }, b { Signal::vocal, 48000.0 };
+        std::vector<float> out;
+        run (p, a, 1.0, 512, true, 2, 2, {}, &out);
+        bool exact = true;
+        for (size_t i = 0; i < out.size() && exact; ++i) exact = out[i] == b.next();
+        report (exact && p.getLatencySamples() == 0, mode == 0 ? "parameter bypass is bit-exact, latency 0"
+                                                                : "output 0 dB is bit-exact pass-through");
+    }
+    {
+        // host bypass crossfades (20 ms) from the processed signal to the dry one, so it never clicks;
+        // once the fade has finished the output must be the input, bit for bit
+        KuralProcessor p;
+        setParam (p, kural::ids::output, -12.0f);
+        p.prepareToPlay (48000.0, 512);
+        juce::AudioBuffer<float> buf (2, 512);
+        juce::MidiBuffer midi;
+        Signal a { Signal::vocal, 48000.0 };
+        bool exact = true;
+        float firstBlockMaxJump = 0.0f, prev = 0.0f;
+        for (int blk = 0; blk < 8; ++blk)
+        {
+            for (int i = 0; i < 512; ++i) { const float v = a.next(); buf.setSample (0, i, v); buf.setSample (1, i, v); }
+            juce::AudioBuffer<float> ref (buf);
+            p.processBlockBypassed (buf, midi);
+            for (int i = 0; i < 512; ++i)
+            {
+                if (blk == 0) firstBlockMaxJump = juce::jmax (firstBlockMaxJump, std::abs (buf.getSample (0, i) - prev));
+                prev = buf.getSample (0, i);
+                if (blk >= 3) exact = exact && buf.getSample (0, i) == ref.getSample (0, i);   // 3 blocks = 32 ms > 20 ms fade
+            }
+        }
+        report (exact && firstBlockMaxJump < 0.25f,
+                juce::String::formatted ("host bypass: crossfades without a jump (largest step %.3f), then bit-exact", firstBlockMaxJump));
+    }
+
+    // 5. output gain does what it says (-6 dB → ×0.501)
+    {
+        KuralProcessor p;
+        setParam (p, kural::ids::output, -6.0f);
+        p.prepareToPlay (48000.0, 512);
+        juce::AudioBuffer<float> buf (2, 512);
+        juce::MidiBuffer midi;
+        for (int c = 0; c < 2; ++c) for (int i = 0; i < 512; ++i) buf.setSample (c, i, 0.5f);
+        p.processBlock (buf, midi);
+        const float g = buf.getSample (0, 511) / 0.5f;
+        report (std::abs (g - juce::Decibels::decibelsToGain (-6.0f)) < 1e-4f, juce::String::formatted ("output -6 dB measured as x%.4f", g));
+    }
+
+    // 6. mono input on a stereo output reaches both sides
+    {
+        KuralProcessor p;
+        setLayout (p, 1, 2);
+        p.prepareToPlay (48000.0, 256);
+        juce::AudioBuffer<float> buf (2, 256);
+        juce::MidiBuffer midi;
+        for (int i = 0; i < 256; ++i) { buf.setSample (0, i, 0.3f); buf.setSample (1, i, 0.0f); }
+        p.processBlock (buf, midi);
+        report (buf.getSample (1, 255) == buf.getSample (0, 255) && buf.getSample (1, 255) != 0.0f, "mono in, stereo out: both channels carry the voice");
+    }
+
+    // 7. state: save → restore round trip, and an older/partial state falls back to defaults
+    {
+        KuralProcessor a, b;
+        setParam (a, kural::ids::output, -7.5f);
+        setParam (a, kural::ids::bypass, 1.0f);
+        juce::MemoryBlock mb;
+        a.getStateInformation (mb);
+        b.setStateInformation (mb.getData(), (int) mb.getSize());
+        const float out = b.apvts.getRawParameterValue (kural::ids::output)->load();
+        const float byp = b.apvts.getRawParameterValue (kural::ids::bypass)->load();
+        report (std::abs (out + 7.5f) < 0.051f && byp > 0.5f, juce::String::formatted ("state round trip: output %.1f dB, bypass %s", out, byp > 0.5f ? "on" : "off"));
+
+        auto xml = juce::AudioProcessor::getXmlFromBinary (mb.getData(), (int) mb.getSize());
+        bool hasVersion = xml != nullptr && xml->getIntAttribute ("stateVersion", -1) == kural::stateVersion;
+        report (hasVersion, "saved state carries its state version");
+
+        // remove the output parameter to simulate a session saved before it existed
+        if (xml != nullptr)
+            for (auto* c : xml->getChildIterator())
+                if (c->getStringAttribute ("id") == kural::ids::output) { xml->removeChildElement (c, true); break; }
+        juce::MemoryBlock old;
+        juce::AudioProcessor::copyXmlToBinary (*xml, old);
+        KuralProcessor c;
+        setParam (c, kural::ids::output, 5.0f);   // a stale value that must not survive
+        c.setStateInformation (old.getData(), (int) old.getSize());
+        const float cOut = c.apvts.getRawParameterValue (kural::ids::output)->load();
+        report (std::abs (cOut) < 0.051f, juce::String::formatted ("partial (older) state: missing parameter falls back to its default (%.1f dB)", cOut));
+
+        KuralProcessor d;
+        const char junk[] = "not a state";
+        d.setStateInformation (junk, (int) sizeof junk);
+        report (std::abs (d.apvts.getRawParameterValue (kural::ids::output)->load()) < 0.051f, "garbage state is ignored safely");
+    }
+
+    // 8. changing sample rate and block size on a running instance
+    {
+        KuralProcessor p;
+        bool fine = true;
+        long allocs = 0;
+        for (double fs : { 44100.0, 192000.0, 48000.0, 96000.0 })
+            for (int blk : { 32, 2048, 480 })
+            {
+                p.prepareToPlay (fs, blk);
+                auto st = run (p, { Signal::vocal, fs }, 0.3, blk, true, 2, 2);
+                fine = fine && st.finite;
+                allocs += st.allocs;
+            }
+        report (fine && allocs == 0, "re-prepared at changing sample rates and block sizes: finite, no allocation");
+    }
+
+    // 9. the editor opens and closes repeatedly without leaks or crashes (headless)
+    {
+        KuralProcessor p;
+        p.prepareToPlay (48000.0, 512);
+        run (p, { Signal::vocal, 48000.0 }, 1.0, 512, false, 2, 2);
+        bool ok = true;
+        for (int i = 0; i < 5; ++i)
+        {
+            std::unique_ptr<juce::AudioProcessorEditor> ed (p.createEditor());
+            ok = ok && ed != nullptr && ed->getWidth() > 0;
+            ed->setSize (ed->getWidth() * 3 / 2, ed->getHeight() * 3 / 2);
+        }
+        report (ok, "editor created, resized and destroyed 5 times");
+    }
+
+    std::printf ("\n%s\n", failures == 0 ? "all checks passed" : "SOME CHECKS FAILED");
+    return failures == 0 ? 0 : 1;
+}

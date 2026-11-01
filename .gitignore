@@ -1,0 +1,13 @@
+build/
+build-*/
+cmake-build-*/
+dist/
+installer/
+pv-log/
+*.user
+.vs/
+.vscode/
+.idea/
+.DS_Store
+__pycache__/
+kural-editor-*.png

@@ -1,0 +1,217 @@
+name: Build Kural (Windows x64 VST3)
+
+# Runs on every push, and manually: Actions tab -> "Build Kural (Windows x64 VST3)" -> "Run workflow".
+# Builds on main that pass every check are published as the "latest" GitHub release (marked as a
+# pre-release while Kural is in development).
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # fast feedback: the framework-free DSP core and its accuracy tests (no JUCE download)
+  dsp-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure (DSP only)
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DKURAL_DSP_ONLY=ON
+      - name: Build
+        run: cmake --build build --target KuralDspTests --parallel
+      - name: Pitch detection tests
+        run: build/KuralDspTests
+
+  windows-vst3:
+    runs-on: windows-2022
+    timeout-minutes: 75
+    steps:
+      - name: Get source
+        uses: actions/checkout@v4
+
+      - name: Configure (fetches JUCE 8.0.8 automatically)
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build VST3, tests and tools (Release, 64-bit)
+        run: cmake --build build --config Release --target Kural_VST3 KuralDspTests KuralStress KuralSnapshot --parallel
+
+      - name: DSP tests (pitch detection accuracy)
+        shell: pwsh
+        run: |
+          & "build/Release/KuralDspTests.exe"
+          if ($LASTEXITCODE -ne 0) { throw "KuralDspTests failed" }
+
+      - name: Robustness checks (rates, blocks, layouts, state, bypass, no audio-thread allocation)
+        shell: pwsh
+        run: |
+          & "build/KuralStress_artefacts/Release/KuralStress.exe"
+          if ($LASTEXITCODE -ne 0) { throw "KuralStress failed" }
+
+      - name: Editor snapshots (layout and Tamil shaping as rendered on Windows)
+        shell: pwsh
+        run: |
+          & "build/KuralSnapshot_artefacts/Release/KuralSnapshot.exe" kural-editor-1x.png 1
+          if ($LASTEXITCODE -ne 0) { throw "snapshot failed" }
+          & "build/KuralSnapshot_artefacts/Release/KuralSnapshot.exe" kural-editor-2x.png 2
+          if ($LASTEXITCODE -ne 0) { throw "snapshot failed" }
+
+      - name: Keep the snapshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: editor-snapshots
+          path: kural-editor-*.png
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Collect plugin
+        shell: pwsh
+        run: |
+          $src = "build/Kural_artefacts/Release/VST3/Kural.vst3"
+          if (-not (Test-Path $src)) { throw "Built VST3 not found: $src" }
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item -Recurse -Force $src "dist/Kural.vst3"
+          Copy-Item INSTALL.md dist/
+          Get-ChildItem -Recurse dist | Select-Object FullName, Length | Format-Table -AutoSize
+
+      - name: Validate with pluginval (strictness 10)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Continue"
+          Invoke-WebRequest https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Windows.zip -OutFile pluginval.zip
+          Expand-Archive pluginval.zip -DestinationPath pluginval -Force
+          $exe = Get-ChildItem -Recurse pluginval -Filter pluginval.exe | Select-Object -First 1
+          if (-not $exe) { Write-Output "::error::pluginval.exe not found in the download"; exit 1 }
+          # pluginval is a GUI-subsystem program on Windows: start it and wait for it
+          $args = @("--strictness-level", "10", "--validate-in-process", "--timeout-ms", "900000", "--output-dir", "pv-log", "--validate", "dist/Kural.vst3")
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList $args -Wait -PassThru -NoNewWindow
+          $code = $p.ExitCode
+          $log = Get-ChildItem -Recurse pv-log -Filter *.txt -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($log) {
+            Get-Content $log.FullName | Select-String -Pattern "FAILED|!!!|SUCCESS|Starting tests|Completed" | Select-Object -Last 30 | ForEach-Object { Write-Output "pluginval: $_" }
+            Copy-Item $log.FullName pluginval-log.txt
+          } else { Write-Output "::warning::pluginval wrote no log" }
+          if ($code -ne 0) { Write-Output "::error::pluginval failed (exit $code)"; exit 1 }
+          Write-Output "pluginval passed"
+
+      - name: Keep the pluginval log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pluginval-log
+          path: pluginval-log.txt
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload plugin (portable)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kural-VST3-Windows
+          path: dist
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Zip (portable package)
+        shell: pwsh
+        run: Compress-Archive -Path dist/* -DestinationPath Kural-VST3-Windows.zip -Force
+
+      - name: Build the setup wizard (Inno Setup)
+        shell: pwsh
+        run: |
+          # the wizard's dark style and colours need Inno Setup 6.7 or newer
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          $ok = (Test-Path $iscc) -and ((Get-Item $iscc).VersionInfo.FileVersionRaw -ge [version]"6.7.0")
+          if (-not $ok) {
+            Invoke-WebRequest "https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe" -OutFile is.exe
+            Start-Process .\is.exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/SP-" -Wait
+          }
+          if (-not (Test-Path $iscc)) { throw "Inno Setup not found" }
+          Write-Output "Inno Setup $((Get-Item $iscc).VersionInfo.ProductVersion)"
+          $version = (Select-String -Path CMakeLists.txt -Pattern 'project\(Kural VERSION ([0-9.]+)').Matches[0].Groups[1].Value
+          & $iscc "/DAppVersion=$version" "/DPluginDir=$PWD\dist" "/DOutDir=$PWD\installer" packaging\windows\kural.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
+          Get-ChildItem installer
+
+      - name: Test the setup wizard on this clean machine (install, verify, uninstall)
+        shell: pwsh
+        run: |
+          $vst = "$env:CommonProgramFiles\VST3\Kural.vst3"
+          $bin = "$vst\Contents\x86_64-win\Kural.vst3"
+          # an older copy is replaced
+          New-Item -ItemType Directory -Force -Path "$vst\Contents\stale" | Out-Null
+          $p = Start-Process installer\Kural-Setup-Windows.exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/LOG=setup.log" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Get-Content setup.log | Select-Object -Last 30; throw "setup failed ($($p.ExitCode))" }
+          if (-not (Test-Path $bin)) { throw "not installed: $bin" }
+          if (Test-Path "$vst\Contents\stale") { throw "the old version was not replaced" }
+          if ((Get-FileHash $bin).Hash -ne (Get-FileHash "dist\Kural.vst3\Contents\x86_64-win\Kural.vst3").Hash) { throw "installed file differs" }
+          $un = "${env:ProgramFiles}\R4N\Kural\unins000.exe"
+          if (-not (Test-Path $un)) { throw "uninstaller missing" }
+          if (Get-ChildItem "$env:CommonProgramFiles\VST3" -Filter "unins*") { throw "uninstaller files in the VST3 folder" }
+          Write-Output "installed OK"
+
+          # the installed copy is the one a host would load: validate it there
+          Write-Output "validating the installed plugin"
+          $exe = Get-ChildItem -Recurse pluginval -Filter pluginval.exe | Select-Object -First 1
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList @("--strictness-level","5","--validate-in-process","--timeout-ms","600000","--validate",$vst) -Wait -PassThru -NoNewWindow
+          if ($p.ExitCode -ne 0) { throw "pluginval failed on the installed plugin ($($p.ExitCode))" }
+
+          # the uninstaller hands over to a copy of itself and returns at once: wait for the files to go
+          Start-Process $un -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait | Out-Null
+          for ($i = 0; $i -lt 60 -and ((Test-Path $vst) -or (Test-Path $un)); $i++) { Start-Sleep -Milliseconds 500 }
+          if (Test-Path $vst) { throw "uninstall left $vst" }
+          if (Test-Path $un) { throw "uninstall left the uninstaller" }
+          Write-Output "uninstalled OK"
+
+      - name: Upload the setup wizard
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kural-Setup-Windows
+          path: installer/Kural-Setup-Windows.exe
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Hand the release files to the publish job
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: |
+            Kural-VST3-Windows.zip
+            installer/Kural-Setup-Windows.exe
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: [dsp-tests, windows-vst3]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: publish-latest
+    steps:
+      - name: Get the release files
+        uses: actions/download-artifact@v4
+        with:
+          name: release-windows
+
+      - name: Publish as the "latest" development build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -e
+          mv installer/Kural-Setup-Windows.exe .
+          ls -l Kural-Setup-Windows.exe Kural-VST3-Windows.zip
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
+          notes=$(printf '%s\n' \
+            "Development build from commit ${{ github.sha }}. Passed the DSP tests, the robustness checks, pluginval (strictness 10) and an install/uninstall test on a clean Windows runner." \
+            "" \
+            "**What works in this build:** live pitch tracking of the incoming vocal with the pitch display, output level, bypass, state saving." \
+            "**Not in this build yet:** the harmony voices (see DEVELOPMENT_PLAN.md)." \
+            "" \
+            "- **Kural-Setup-Windows.exe** (VST3, 64-bit): run it and click through (Windows may show *Windows protected your PC*: click *More info* > *Run anyway*), then rescan plugins in your host." \
+            "- **Kural-VST3-Windows.zip**: portable; copy Kural.vst3 into C:\\Program Files\\Common Files\\VST3." \
+            "" \
+            "Guide: INSTALL.md (also inside the zip).")
+          gh release create latest Kural-Setup-Windows.exe Kural-VST3-Windows.zip --target "${{ github.sha }}" --title "Kural - development build" --notes "$notes" --prerelease
