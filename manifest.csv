@@ -1,0 +1,245 @@
+id,dataset,singer,voice,technique,context,mic,sr,seconds,f0_ref,f0_ref_kind,source
+vocadito_1,vocadito,vocadito_1,,solo song,song,various (crowd-sourced),44100,33.21,f0/vocadito_1.csv,vocadito annotation,Audio/vocadito_1.wav
+vocadito_10,vocadito,vocadito_10,,solo song,song,various (crowd-sourced),44100,9.10,f0/vocadito_10.csv,vocadito annotation,Audio/vocadito_10.wav
+vocadito_11,vocadito,vocadito_11,,solo song,song,various (crowd-sourced),44100,12.98,f0/vocadito_11.csv,vocadito annotation,Audio/vocadito_11.wav
+vocadito_12,vocadito,vocadito_12,,solo song,song,various (crowd-sourced),44100,15.15,f0/vocadito_12.csv,vocadito annotation,Audio/vocadito_12.wav
+vocadito_13,vocadito,vocadito_13,,solo song,song,various (crowd-sourced),44100,22.36,f0/vocadito_13.csv,vocadito annotation,Audio/vocadito_13.wav
+vocadito_14,vocadito,vocadito_14,,solo song,song,various (crowd-sourced),44100,12.20,f0/vocadito_14.csv,vocadito annotation,Audio/vocadito_14.wav
+vocadito_15,vocadito,vocadito_15,,solo song,song,various (crowd-sourced),44100,20.28,f0/vocadito_15.csv,vocadito annotation,Audio/vocadito_15.wav
+vocadito_16,vocadito,vocadito_16,,solo song,song,various (crowd-sourced),44100,17.28,f0/vocadito_16.csv,vocadito annotation,Audio/vocadito_16.wav
+vocadito_17,vocadito,vocadito_17,,solo song,song,various (crowd-sourced),44100,23.57,f0/vocadito_17.csv,vocadito annotation,Audio/vocadito_17.wav
+vocadito_18,vocadito,vocadito_18,,solo song,song,various (crowd-sourced),44100,29.14,f0/vocadito_18.csv,vocadito annotation,Audio/vocadito_18.wav
+vocadito_19,vocadito,vocadito_19,,solo song,song,various (crowd-sourced),44100,30.49,f0/vocadito_19.csv,vocadito annotation,Audio/vocadito_19.wav
+vocadito_2,vocadito,vocadito_2,,solo song,song,various (crowd-sourced),44100,35.21,f0/vocadito_2.csv,vocadito annotation,Audio/vocadito_2.wav
+vocadito_20,vocadito,vocadito_20,,solo song,song,various (crowd-sourced),44100,8.71,f0/vocadito_20.csv,vocadito annotation,Audio/vocadito_20.wav
+vocadito_21,vocadito,vocadito_21,,solo song,song,various (crowd-sourced),44100,22.00,f0/vocadito_21.csv,vocadito annotation,Audio/vocadito_21.wav
+vocadito_22,vocadito,vocadito_22,,solo song,song,various (crowd-sourced),44100,18.33,f0/vocadito_22.csv,vocadito annotation,Audio/vocadito_22.wav
+vocadito_23,vocadito,vocadito_23,,solo song,song,various (crowd-sourced),44100,18.04,f0/vocadito_23.csv,vocadito annotation,Audio/vocadito_23.wav
+vocadito_24,vocadito,vocadito_24,,solo song,song,various (crowd-sourced),44100,14.76,f0/vocadito_24.csv,vocadito annotation,Audio/vocadito_24.wav
+vocadito_25,vocadito,vocadito_25,,solo song,song,various (crowd-sourced),44100,14.66,f0/vocadito_25.csv,vocadito annotation,Audio/vocadito_25.wav
+vocadito_26,vocadito,vocadito_26,,solo song,song,various (crowd-sourced),44100,12.86,f0/vocadito_26.csv,vocadito annotation,Audio/vocadito_26.wav
+vocadito_27,vocadito,vocadito_27,,solo song,song,various (crowd-sourced),44100,14.02,f0/vocadito_27.csv,vocadito annotation,Audio/vocadito_27.wav
+vocadito_28,vocadito,vocadito_28,,solo song,song,various (crowd-sourced),44100,12.90,f0/vocadito_28.csv,vocadito annotation,Audio/vocadito_28.wav
+vocadito_29,vocadito,vocadito_29,,solo song,song,various (crowd-sourced),44100,14.89,f0/vocadito_29.csv,vocadito annotation,Audio/vocadito_29.wav
+vocadito_3,vocadito,vocadito_3,,solo song,song,various (crowd-sourced),44100,21.74,f0/vocadito_3.csv,vocadito annotation,Audio/vocadito_3.wav
+vocadito_30,vocadito,vocadito_30,,solo song,song,various (crowd-sourced),44100,13.02,f0/vocadito_30.csv,vocadito annotation,Audio/vocadito_30.wav
+vocadito_31,vocadito,vocadito_31,,solo song,song,various (crowd-sourced),44100,14.03,f0/vocadito_31.csv,vocadito annotation,Audio/vocadito_31.wav
+vocadito_32,vocadito,vocadito_32,,solo song,song,various (crowd-sourced),44100,25.03,f0/vocadito_32.csv,vocadito annotation,Audio/vocadito_32.wav
+vocadito_33,vocadito,vocadito_33,,solo song,song,various (crowd-sourced),44100,30.00,f0/vocadito_33.csv,vocadito annotation,Audio/vocadito_33.wav
+vocadito_34,vocadito,vocadito_34,,solo song,song,various (crowd-sourced),44100,24.85,f0/vocadito_34.csv,vocadito annotation,Audio/vocadito_34.wav
+vocadito_35,vocadito,vocadito_35,,solo song,song,various (crowd-sourced),44100,13.80,f0/vocadito_35.csv,vocadito annotation,Audio/vocadito_35.wav
+vocadito_36,vocadito,vocadito_36,,solo song,song,various (crowd-sourced),44100,23.28,f0/vocadito_36.csv,vocadito annotation,Audio/vocadito_36.wav
+vocadito_37,vocadito,vocadito_37,,solo song,song,various (crowd-sourced),44100,38.74,f0/vocadito_37.csv,vocadito annotation,Audio/vocadito_37.wav
+vocadito_38,vocadito,vocadito_38,,solo song,song,various (crowd-sourced),44100,27.84,f0/vocadito_38.csv,vocadito annotation,Audio/vocadito_38.wav
+vocadito_39,vocadito,vocadito_39,,solo song,song,various (crowd-sourced),44100,31.68,f0/vocadito_39.csv,vocadito annotation,Audio/vocadito_39.wav
+vocadito_4,vocadito,vocadito_4,,solo song,song,various (crowd-sourced),44100,18.46,f0/vocadito_4.csv,vocadito annotation,Audio/vocadito_4.wav
+vocadito_40,vocadito,vocadito_40,,solo song,song,various (crowd-sourced),44100,18.58,f0/vocadito_40.csv,vocadito annotation,Audio/vocadito_40.wav
+vocadito_5,vocadito,vocadito_5,,solo song,song,various (crowd-sourced),44100,23.23,f0/vocadito_5.csv,vocadito annotation,Audio/vocadito_5.wav
+vocadito_6,vocadito,vocadito_6,,solo song,song,various (crowd-sourced),44100,23.83,f0/vocadito_6.csv,vocadito annotation,Audio/vocadito_6.wav
+vocadito_7,vocadito,vocadito_7,,solo song,song,various (crowd-sourced),44100,19.47,f0/vocadito_7.csv,vocadito annotation,Audio/vocadito_7.wav
+vocadito_8,vocadito,vocadito_8,,solo song,song,various (crowd-sourced),44100,17.04,f0/vocadito_8.csv,vocadito annotation,Audio/vocadito_8.wav
+vocadito_9,vocadito,vocadito_9,,solo song,song,various (crowd-sourced),44100,20.38,f0/vocadito_9.csv,vocadito annotation,Audio/vocadito_9.wav
+dcs_LI_QuartetA_Take04_A1,dcs,A1_LI,alto,choral singing,quartet,HSM,22050,45.00,f0/dcs_LI_QuartetA_Take04_A1.csv,"manual, larynx microphone",DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_LI_QuartetA_Take04_A1_HSM.wav
+dcs_LI_QuartetA_Take04_B1,dcs,B1_LI,bass,choral singing,quartet,HSM,22050,45.00,f0/dcs_LI_QuartetA_Take04_B1.csv,"manual, larynx microphone",DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_LI_QuartetA_Take04_B1_HSM.wav
+dcs_LI_QuartetA_Take04_S2,dcs,S2_LI,soprano,choral singing,quartet,DYN,22050,45.00,f0/dcs_LI_QuartetA_Take04_S2.csv,"manual, larynx microphone",DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_LI_QuartetA_Take04_S2_DYN.wav
+dcs_LI_QuartetA_Take04_T1,dcs,T1_LI,tenor,choral singing,quartet,HSM,22050,45.00,f0/dcs_LI_QuartetA_Take04_T1.csv,"manual, larynx microphone",DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_LI_QuartetA_Take04_T1_HSM.wav
+dcs_LI_QuartetB_Take04_A2,dcs,A2_LI,alto,choral singing,quartet,HSM,22050,45.00,f0/dcs_LI_QuartetB_Take04_A2.csv,"manual, larynx microphone",DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_LI_QuartetB_Take04_A2_HSM.wav
+dcs_LI_QuartetB_Take04_B2,dcs,B2_LI,bass,choral singing,quartet,HSM,22050,45.00,f0/dcs_LI_QuartetB_Take04_B2.csv,"manual, larynx microphone",DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_LI_QuartetB_Take04_B2_HSM.wav
+dcs_LI_QuartetB_Take04_S1,dcs,S1_LI,soprano,choral singing,quartet,DYN,22050,45.00,f0/dcs_LI_QuartetB_Take04_S1.csv,"manual, larynx microphone",DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_LI_QuartetB_Take04_S1_DYN.wav
+dcs_LI_QuartetB_Take04_T2,dcs,T2_LI,tenor,choral singing,quartet,HSM,22050,45.00,f0/dcs_LI_QuartetB_Take04_T2.csv,"manual, larynx microphone",DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_LI_QuartetB_Take04_T2_HSM.wav
+dcs_SE_QuartetA_CadenceMajor01_A1,dcs,A1_SE,alto,choral singing,quartet,HSM,22050,7.56,f0/dcs_SE_QuartetA_CadenceMajor01_A1.csv,CREPE on larynx microphone (confidence >= 0.5),DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_SE_QuartetA_CadenceMajor01_A1_HSM.wav
+dcs_SE_QuartetA_CadenceMajor01_B1,dcs,B1_SE,bass,choral singing,quartet,HSM,22050,7.56,f0/dcs_SE_QuartetA_CadenceMajor01_B1.csv,CREPE on larynx microphone (confidence >= 0.5),DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_SE_QuartetA_CadenceMajor01_B1_HSM.wav
+dcs_SE_QuartetA_CadenceMajor01_S2,dcs,S2_SE,soprano,choral singing,quartet,DYN,22050,7.56,f0/dcs_SE_QuartetA_CadenceMajor01_S2.csv,CREPE on larynx microphone (confidence >= 0.5),DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_SE_QuartetA_CadenceMajor01_S2_DYN.wav
+dcs_SE_QuartetA_CadenceMajor01_T1,dcs,T1_SE,tenor,choral singing,quartet,HSM,22050,7.56,f0/dcs_SE_QuartetA_CadenceMajor01_T1.csv,CREPE on larynx microphone (confidence >= 0.5),DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_SE_QuartetA_CadenceMajor01_T1_HSM.wav
+dcs_SE_QuartetB_Tuning01_A2,dcs,A2_SE,alto,choral singing,quartet,HSM,22050,5.26,f0/dcs_SE_QuartetB_Tuning01_A2.csv,CREPE on larynx microphone (confidence >= 0.5),DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_SE_QuartetB_Tuning01_A2_HSM.wav
+dcs_SE_QuartetB_Tuning01_B2,dcs,B2_SE,bass,choral singing,quartet,HSM,22050,5.26,f0/dcs_SE_QuartetB_Tuning01_B2.csv,CREPE on larynx microphone (confidence >= 0.5),DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_SE_QuartetB_Tuning01_B2_HSM.wav
+dcs_SE_QuartetB_Tuning01_S1,dcs,S1_SE,soprano,choral singing,quartet,DYN,22050,5.26,f0/dcs_SE_QuartetB_Tuning01_S1.csv,CREPE on larynx microphone (confidence >= 0.5),DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_SE_QuartetB_Tuning01_S1_DYN.wav
+dcs_SE_QuartetB_Tuning01_T2,dcs,T2_SE,tenor,choral singing,quartet,HSM,22050,5.26,f0/dcs_SE_QuartetB_Tuning01_T2.csv,CREPE on larynx microphone (confidence >= 0.5),DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_SE_QuartetB_Tuning01_T2_HSM.wav
+dcs_TP_QuartetA_Take01_A1,dcs,A1_TP,alto,choral singing,quartet,HSM,22050,45.00,f0/dcs_TP_QuartetA_Take01_A1.csv,CREPE on larynx microphone (confidence >= 0.5),DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_TP_QuartetA_Take01_A1_HSM.wav
+dcs_TP_QuartetA_Take01_B1,dcs,B1_TP,bass,choral singing,quartet,HSM,22050,45.00,f0/dcs_TP_QuartetA_Take01_B1.csv,CREPE on larynx microphone (confidence >= 0.5),DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_TP_QuartetA_Take01_B1_HSM.wav
+dcs_TP_QuartetA_Take01_S2,dcs,S2_TP,soprano,choral singing,quartet,DYN,22050,45.00,f0/dcs_TP_QuartetA_Take01_S2.csv,CREPE on larynx microphone (confidence >= 0.5),DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_TP_QuartetA_Take01_S2_DYN.wav
+dcs_TP_QuartetA_Take01_T1,dcs,T1_TP,tenor,choral singing,quartet,HSM,22050,45.00,f0/dcs_TP_QuartetA_Take01_T1.csv,CREPE on larynx microphone (confidence >= 0.5),DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_TP_QuartetA_Take01_T1_HSM.wav
+dcs_LI_Basses_Take01_B3,dcs,B3_LI,bass,choral singing,section,DYN,22050,45.00,f0/dcs_LI_Basses_Take01_B3.csv,CREPE on larynx microphone (confidence >= 0.5),DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_LI_Basses_Take01_B3_DYN.wav
+dcs_LI_Basses_Take01_B4,dcs,B4_LI,bass,choral singing,section,DYN,22050,45.00,f0/dcs_LI_Basses_Take01_B4.csv,CREPE on larynx microphone (confidence >= 0.5),DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_LI_Basses_Take01_B4_DYN.wav
+dcs_SE_Basses_Tuning01_B3,dcs,B3_SE,bass,choral singing,section,DYN,22050,4.53,f0/dcs_SE_Basses_Tuning01_B3.csv,CREPE on larynx microphone (confidence >= 0.5),DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_SE_Basses_Tuning01_B3_DYN.wav
+dcs_SE_Basses_Tuning01_B4,dcs,B4_SE,bass,choral singing,section,DYN,22050,4.53,f0/dcs_SE_Basses_Tuning01_B4.csv,CREPE on larynx microphone (confidence >= 0.5),DagstuhlChoirSet_V1.2.3/audio_wav_22050_mono/DCS_SE_Basses_Tuning01_B4_DYN.wav
+vocalset_f1_belt_arpeggios,vocalset,f1,female,belt,arpeggios,studio,44100,7.28,,,FULL/female1/arpeggios/belt/f1_arpeggios_belt_c_a.wav
+vocalset_f1_breathy_arpeggios,vocalset,f1,female,breathy,arpeggios,studio,44100,7.44,,,FULL/female1/arpeggios/breathy/f1_arpeggios_breathy_a.wav
+vocalset_f1_fast_forte_arpeggios,vocalset,f1,female,fast forte,arpeggios,studio,44100,2.56,,,FULL/female1/arpeggios/fast_forte/f1_arpeggios_c_fast_forte_a.wav
+vocalset_f1_lip_trill_arpeggios,vocalset,f1,female,lip trill,arpeggios,studio,44100,6.38,,,FULL/female1/arpeggios/lip_trill/f1_arpeggios_lip_trill_a.wav
+vocalset_f1_messa_long_tones,vocalset,f1,female,messa,long_tones,studio,44100,14.19,,,FULL/female1/long_tones/messa/f1_long_messa_a.wav
+vocalset_f1_spoken_excerpts,vocalset,f1,female,spoken,excerpts,studio,44100,15.09,,,FULL/female1/excerpts/spoken/f1_row_spoken.wav
+vocalset_f1_straight_excerpts,vocalset,f1,female,straight,excerpts,studio,44100,32.53,,,FULL/female1/excerpts/straight/f1_caro_straight.wav
+vocalset_f1_vibrato_excerpts,vocalset,f1,female,vibrato,excerpts,studio,44100,34.64,,,FULL/female1/excerpts/vibrato/f1_caro_vibrato.wav
+vocalset_f1_vocal_fry_arpeggios,vocalset,f1,female,vocal fry,arpeggios,studio,44100,8.17,,,FULL/female1/arpeggios/vocal_fry/f1_arpeggios_vocal_fry_a.wav
+vocalset_f2_belt_arpeggios,vocalset,f2,female,belt,arpeggios,studio,44100,6.14,,,FULL/female2/arpeggios/belt/f2_arpeggios_belt_a.wav
+vocalset_f2_breathy_arpeggios,vocalset,f2,female,breathy,arpeggios,studio,44100,6.71,,,FULL/female2/arpeggios/breathy/f2_arpeggios_breathy_a.wav
+vocalset_f2_fast_forte_arpeggios,vocalset,f2,female,fast forte,arpeggios,studio,44100,2.27,,,FULL/female2/arpeggios/fast_forte/f2_arepggios_c_fast_forte_a.wav
+vocalset_f2_lip_trill_arpeggios,vocalset,f2,female,lip trill,arpeggios,studio,44100,5.25,,,FULL/female2/arpeggios/lip_trill/f2_arpeggios_lip_trill_a.wav
+vocalset_f2_messa_long_tones,vocalset,f2,female,messa,long_tones,studio,44100,14.66,,,FULL/female2/long_tones/messa/f2_long_messa_a.wav
+vocalset_f2_spoken_excerpts,vocalset,f2,female,spoken,excerpts,studio,44100,14.04,,,FULL/female2/excerpts/spoken/f2_row_spoken.wav
+vocalset_f2_straight_excerpts,vocalset,f2,female,straight,excerpts,studio,44100,37.03,,,FULL/female2/excerpts/straight/f2_caro_straight.wav
+vocalset_f2_vibrato_excerpts,vocalset,f2,female,vibrato,excerpts,studio,44100,37.10,,,FULL/female2/excerpts/vibrato/f2_caro_vibrato.wav
+vocalset_f2_vocal_fry_arpeggios,vocalset,f2,female,vocal fry,arpeggios,studio,44100,7.50,,,FULL/female2/arpeggios/vocal_fry/f2_arpeggios_vocal_fry_a.wav
+vocalset_f3_belt_arpeggios,vocalset,f3,female,belt,arpeggios,studio,44100,8.70,,,FULL/female3/arpeggios/belt/f3_arpeggios_belt_a.wav
+vocalset_f3_breathy_arpeggios,vocalset,f3,female,breathy,arpeggios,studio,44100,8.27,,,FULL/female3/arpeggios/breathy/f3_arpeggios_breathy_a.wav
+vocalset_f3_fast_forte_arpeggios,vocalset,f3,female,fast forte,arpeggios,studio,44100,2.94,,,FULL/female3/arpeggios/fast_forte/f3_arpeggios_c_fast_forte_a.wav
+vocalset_f3_lip_trill_arpeggios,vocalset,f3,female,lip trill,arpeggios,studio,44100,7.63,,,FULL/female3/arpeggios/lip_trill/f3_arpeggios_lip_trill_a.wav
+vocalset_f3_messa_long_tones,vocalset,f3,female,messa,long_tones,studio,44100,13.29,,,FULL/female3/long_tones/messa/f3_long_messa_a.wav
+vocalset_f3_spoken_excerpts,vocalset,f3,female,spoken,excerpts,studio,44100,11.76,,,FULL/female3/excerpts/spoken/f3_row_spoken.wav
+vocalset_f3_straight_excerpts,vocalset,f3,female,straight,excerpts,studio,44100,19.05,,,FULL/female3/excerpts/straight/f3_caro_straight.wav
+vocalset_f3_vibrato_excerpts,vocalset,f3,female,vibrato,excerpts,studio,44100,34.82,,,FULL/female3/excerpts/vibrato/f3_caro_vibrato.wav
+vocalset_f3_vocal_fry_arpeggios,vocalset,f3,female,vocal fry,arpeggios,studio,44100,7.69,,,FULL/female3/arpeggios/vocal_fry/f3_arpeggios_vocal_fry_a.wav
+vocalset_f4_belt_arpeggios,vocalset,f4,female,belt,arpeggios,studio,44100,5.19,,,FULL/female4/arpeggios/belt/f4_arpeggios_belt_a.wav
+vocalset_f4_breathy_arpeggios,vocalset,f4,female,breathy,arpeggios,studio,44100,5.00,,,FULL/female4/arpeggios/breathy/f4_arpeggios_breathy_a.wav
+vocalset_f4_fast_forte_arpeggios,vocalset,f4,female,fast forte,arpeggios,studio,44100,3.27,,,FULL/female4/arpeggios/fast_forte/f4_arpeggios_c_fast_forte_a.wav
+vocalset_f4_lip_trill_arpeggios,vocalset,f4,female,lip trill,arpeggios,studio,44100,6.98,,,FULL/female4/arpeggios/lip_trill/f4_arpeggios_lip_trill_a.wav
+vocalset_f4_messa_long_tones,vocalset,f4,female,messa,long_tones,studio,44100,12.19,,,FULL/female4/long_tones/messa/f4_long_messa_a.wav
+vocalset_f4_spoken_excerpts,vocalset,f4,female,spoken,excerpts,studio,44100,10.30,,,FULL/female4/excerpts/spoken/f4_row_spoken.wav
+vocalset_f4_straight_excerpts,vocalset,f4,female,straight,excerpts,studio,44100,41.19,,,FULL/female4/excerpts/straight/f4_caro_straight.wav
+vocalset_f4_vibrato_excerpts,vocalset,f4,female,vibrato,excerpts,studio,44100,38.05,,,FULL/female4/excerpts/vibrato/f4_caro_vibrato.wav
+vocalset_f4_vocal_fry_arpeggios,vocalset,f4,female,vocal fry,arpeggios,studio,44100,6.88,,,FULL/female4/arpeggios/vocal_fry/f4_arpeggios_vocal_fry_a.wav
+vocalset_f5_belt_arpeggios,vocalset,f5,female,belt,arpeggios,studio,44100,7.28,,,FULL/female5/arpeggios/belt/f5_arpeggios_belt_a.wav
+vocalset_f5_breathy_arpeggios,vocalset,f5,female,breathy,arpeggios,studio,44100,9.27,,,FULL/female5/arpeggios/breathy/f5_arpeggios_breathy_a.wav
+vocalset_f5_fast_forte_arpeggios,vocalset,f5,female,fast forte,arpeggios,studio,44100,2.37,,,FULL/female5/arpeggios/fast_forte/f5_arpeggios_c_fast_forte_a.wav
+vocalset_f5_lip_trill_arpeggios,vocalset,f5,female,lip trill,arpeggios,studio,44100,7.71,,,FULL/female5/arpeggios/lip_trill/f5_arpeggios_lip_trill_a.wav
+vocalset_f5_messa_long_tones,vocalset,f5,female,messa,long_tones,studio,44100,15.55,,,FULL/female5/long_tones/messa/f5_long_messa_a.wav
+vocalset_f5_spoken_excerpts,vocalset,f5,female,spoken,excerpts,studio,44100,15.14,,,FULL/female5/excerpts/spoken/f5_row_spoken.wav
+vocalset_f5_straight_excerpts,vocalset,f5,female,straight,excerpts,studio,44100,44.88,,,FULL/female5/excerpts/straight/f5_caro_straight.wav
+vocalset_f5_vibrato_excerpts,vocalset,f5,female,vibrato,excerpts,studio,44100,45.00,,,FULL/female5/excerpts/vibrato/f5_caro_vibrato.wav
+vocalset_f5_vocal_fry_arpeggios,vocalset,f5,female,vocal fry,arpeggios,studio,44100,10.61,,,FULL/female5/arpeggios/vocal_fry/f5_arpeggios_vocal_fry_a.wav
+vocalset_f6_belt_arpeggios,vocalset,f6,female,belt,arpeggios,studio,44100,7.51,,,FULL/female6/arpeggios/belt/f6_arpeggios_belt_1_a.wav
+vocalset_f6_breathy_arpeggios,vocalset,f6,female,breathy,arpeggios,studio,44100,8.35,,,FULL/female6/arpeggios/breathy/f6_arpeggios_breathy_a.wav
+vocalset_f6_fast_forte_arpeggios,vocalset,f6,female,fast forte,arpeggios,studio,44100,2.11,,,FULL/female6/arpeggios/fast_forte/f6_arpeggios_c_fast_forte_a.wav
+vocalset_f6_lip_trill_arpeggios,vocalset,f6,female,lip trill,arpeggios,studio,44100,13.18,,,FULL/female6/arpeggios/lip_trill/f6_arpeggios_lip_trill_a.wav
+vocalset_f6_messa_long_tones,vocalset,f6,female,messa,long_tones,studio,44100,9.86,,,FULL/female6/long_tones/messa/f6_long_messa_a.wav
+vocalset_f6_spoken_excerpts,vocalset,f6,female,spoken,excerpts,studio,44100,10.53,,,FULL/female6/excerpts/spoken/f6_row_spoken.wav
+vocalset_f6_straight_excerpts,vocalset,f6,female,straight,excerpts,studio,44100,44.11,,,FULL/female6/excerpts/straight/f6_caro_straight.wav
+vocalset_f6_vibrato_excerpts,vocalset,f6,female,vibrato,excerpts,studio,44100,45.00,,,FULL/female6/excerpts/vibrato/f6_caro_vibrato.wav
+vocalset_f6_vocal_fry_arpeggios,vocalset,f6,female,vocal fry,arpeggios,studio,44100,7.61,,,FULL/female6/arpeggios/vocal_fry/f6_arpeggios_vocal_fry_a.wav
+vocalset_f7_belt_arpeggios,vocalset,f7,female,belt,arpeggios,studio,44100,6.81,,,FULL/female7/arpeggios/belt/f7_arpeggios_belt_a.wav
+vocalset_f7_breathy_arpeggios,vocalset,f7,female,breathy,arpeggios,studio,44100,7.40,,,FULL/female7/arpeggios/breathy/f7_arpeggios_breathy_a.wav
+vocalset_f7_fast_forte_arpeggios,vocalset,f7,female,fast forte,arpeggios,studio,44100,2.13,,,FULL/female7/arpeggios/fast_forte/f7_arpeggios_c_fast_forte_a.wav
+vocalset_f7_lip_trill_arpeggios,vocalset,f7,female,lip trill,arpeggios,studio,44100,6.88,,,FULL/female7/arpeggios/lip_trill/f7_arpeggios_lip_trill_a.wav
+vocalset_f7_messa_long_tones,vocalset,f7,female,messa,long_tones,studio,44100,7.10,,,FULL/female7/long_tones/messa/f7_long_messa_a.wav
+vocalset_f7_spoken_excerpts,vocalset,f7,female,spoken,excerpts,studio,44100,9.77,,,FULL/female7/excerpts/spoken/f7_row_spoken.wav
+vocalset_f7_straight_excerpts,vocalset,f7,female,straight,excerpts,studio,44100,38.24,,,FULL/female7/excerpts/straight/f7_caro_straight.wav
+vocalset_f7_vibrato_excerpts,vocalset,f7,female,vibrato,excerpts,studio,44100,39.12,,,FULL/female7/excerpts/vibrato/f7_caro_vibrato.wav
+vocalset_f7_vocal_fry_arpeggios,vocalset,f7,female,vocal fry,arpeggios,studio,44100,8.12,,,FULL/female7/arpeggios/vocal_fry/f7_arpeggios_vocal_fry_a.wav
+vocalset_f8_belt_arpeggios,vocalset,f8,female,belt,arpeggios,studio,44100,8.46,,,FULL/female8/arpeggios/belt/f8_arpeggios_belt_a.wav
+vocalset_f8_breathy_arpeggios,vocalset,f8,female,breathy,arpeggios,studio,44100,9.53,,,FULL/female8/arpeggios/breathy/f8_arpeggios_breathy_a.wav
+vocalset_f8_fast_forte_arpeggios,vocalset,f8,female,fast forte,arpeggios,studio,44100,2.29,,,FULL/female8/arpeggios/fast_forte/f8_arpeggios_c_fast_forte_a.wav
+vocalset_f8_lip_trill_arpeggios,vocalset,f8,female,lip trill,arpeggios,studio,44100,6.85,,,FULL/female8/arpeggios/lip_trill/f8_arpeggios_lip_trill_a.wav
+vocalset_f8_messa_long_tones,vocalset,f8,female,messa,long_tones,studio,44100,15.81,,,FULL/female8/long_tones/messa/f8_long_messa_a.wav
+vocalset_f8_spoken_excerpts,vocalset,f8,female,spoken,excerpts,studio,44100,16.39,,,FULL/female8/excerpts/spoken/f8_row_spoken.wav
+vocalset_f8_straight_excerpts,vocalset,f8,female,straight,excerpts,studio,44100,38.21,,,FULL/female8/excerpts/straight/f8_caro_straight.wav
+vocalset_f8_vibrato_excerpts,vocalset,f8,female,vibrato,excerpts,studio,44100,38.34,,,FULL/female8/excerpts/vibrato/f8_caro_vibrato.wav
+vocalset_f8_vocal_fry_arpeggios,vocalset,f8,female,vocal fry,arpeggios,studio,44100,9.01,,,FULL/female8/arpeggios/vocal_fry/f8_arpeggios_vocal_fry_a.wav
+vocalset_f9_belt_arpeggios,vocalset,f9,female,belt,arpeggios,studio,44100,4.30,,,FULL/female9/arpeggios/belt/f9_arpeggios_belt_a.wav
+vocalset_f9_breathy_arpeggios,vocalset,f9,female,breathy,arpeggios,studio,44100,5.02,,,FULL/female9/arpeggios/breathy/f9_arpeggios_breathy_a.wav
+vocalset_f9_fast_forte_arpeggios,vocalset,f9,female,fast forte,arpeggios,studio,44100,1.84,,,FULL/female9/arpeggios/fast_forte/f9_arpeggios_c_fast_forte_a.wav
+vocalset_f9_lip_trill_arpeggios,vocalset,f9,female,lip trill,arpeggios,studio,44100,5.84,,,FULL/female9/arpeggios/lip_trill/f9_arpeggios_lip_trill_a.wav
+vocalset_f9_messa_long_tones,vocalset,f9,female,messa,long_tones,studio,44100,9.35,,,FULL/female9/long_tones/messa/f9_long_messa_a.wav
+vocalset_f9_spoken_excerpts,vocalset,f9,female,spoken,excerpts,studio,44100,13.12,,,FULL/female9/excerpts/spoken/f9_row_spoken.wav
+vocalset_f9_straight_excerpts,vocalset,f9,female,straight,excerpts,studio,44100,31.47,,,FULL/female9/excerpts/straight/f9_caro_straight.wav
+vocalset_f9_vibrato_excerpts,vocalset,f9,female,vibrato,excerpts,studio,44100,33.17,,,FULL/female9/excerpts/vibrato/f9_caro_vibrato.wav
+vocalset_f9_vocal_fry_arpeggios,vocalset,f9,female,vocal fry,arpeggios,studio,44100,5.65,,,FULL/female9/arpeggios/vocal_fry/f9_arpeggios_vocal_fry_a.wav
+vocalset_m1_belt_arpeggios,vocalset,m1,male,belt,arpeggios,studio,44100,11.44,,,FULL/male1/arpeggios/belt/m1_arpeggios_belt_a.wav
+vocalset_m1_breathy_arpeggios,vocalset,m1,male,breathy,arpeggios,studio,44100,10.95,,,FULL/male1/arpeggios/breathy/m1_arpeggios_breathy_a.wav
+vocalset_m1_fast_forte_arpeggios,vocalset,m1,male,fast forte,arpeggios,studio,44100,2.04,,,FULL/male1/arpeggios/fast_forte/m1_arpeggios_c_fast_forte_a.wav
+vocalset_m1_lip_trill_arpeggios,vocalset,m1,male,lip trill,arpeggios,studio,44100,10.13,,,FULL/male1/arpeggios/lip_trill/m1_arpeggios_lip_trill_a.wav
+vocalset_m1_messa_long_tones,vocalset,m1,male,messa,long_tones,studio,44100,14.11,,,FULL/male1/long_tones/messa/m1_long_messa_a.wav
+vocalset_m1_spoken_excerpts,vocalset,m1,male,spoken,excerpts,studio,44100,13.83,,,FULL/male1/excerpts/spoken/m1_row_spoken.wav
+vocalset_m1_straight_excerpts,vocalset,m1,male,straight,excerpts,studio,44100,45.00,,,FULL/male1/excerpts/straight/m1_caro_straight.wav
+vocalset_m1_vibrato_excerpts,vocalset,m1,male,vibrato,excerpts,studio,44100,39.67,,,FULL/male1/excerpts/vibrato/m1_caro_vibrato.wav
+vocalset_m1_vocal_fry_arpeggios,vocalset,m1,male,vocal fry,arpeggios,studio,44100,12.15,,,FULL/male1/arpeggios/vocal_fry/m1_arpeggios_vocal_fry_a.wav
+vocalset_m10_belt_arpeggios,vocalset,m10,male,belt,arpeggios,studio,44100,5.88,,,FULL/male10/arpeggios/belt/m10_arpeggios_belt_a.wav
+vocalset_m10_breathy_arpeggios,vocalset,m10,male,breathy,arpeggios,studio,44100,5.11,,,FULL/male10/arpeggios/breathy/m10_arpeggios_breathy_a.wav
+vocalset_m10_fast_forte_arpeggios,vocalset,m10,male,fast forte,arpeggios,studio,44100,1.83,,,FULL/male10/arpeggios/fast_forte/m10_arpeggios_c_fast_forte_a.wav
+vocalset_m10_lip_trill_arpeggios,vocalset,m10,male,lip trill,arpeggios,studio,44100,5.12,,,FULL/male10/arpeggios/lip_trill/m10_arpeggios_lip_trill_a.wav
+vocalset_m10_messa_long_tones,vocalset,m10,male,messa,long_tones,studio,44100,11.97,,,FULL/male10/long_tones/messa/m10_long_messa_a.wav
+vocalset_m10_spoken_excerpts,vocalset,m10,male,spoken,excerpts,studio,44100,8.61,,,FULL/male10/excerpts/spoken/m10_row_spoken.wav
+vocalset_m10_straight_excerpts,vocalset,m10,male,straight,excerpts,studio,44100,32.66,,,FULL/male10/excerpts/straight/m10_caro_straight.wav
+vocalset_m10_vibrato_excerpts,vocalset,m10,male,vibrato,excerpts,studio,44100,36.61,,,FULL/male10/excerpts/vibrato/caro_vibrato.wav
+vocalset_m10_vocal_fry_arpeggios,vocalset,m10,male,vocal fry,arpeggios,studio,44100,6.45,,,FULL/male10/arpeggios/vocal_fry/m10_arpeggios_vocal_fry_a.wav
+vocalset_m11_belt_arpeggios,vocalset,m11,male,belt,arpeggios,studio,44100,7.17,,,FULL/male11/arpeggios/belt/m11_arpeggios_belt_a.wav
+vocalset_m11_breathy_arpeggios,vocalset,m11,male,breathy,arpeggios,studio,44100,7.62,,,FULL/male11/arpeggios/breathy/m11_arpeggios_breathy_a.wav
+vocalset_m11_fast_forte_arpeggios,vocalset,m11,male,fast forte,arpeggios,studio,44100,2.08,,,FULL/male11/arpeggios/fast_forte/m11_arpeggios_c_fast_forte_a.wav
+vocalset_m11_lip_trill_arpeggios,vocalset,m11,male,lip trill,arpeggios,studio,44100,5.66,,,FULL/male11/arpeggios/lip_trill/m11_arpeggios_lip_trill_a.wav
+vocalset_m11_messa_long_tones,vocalset,m11,male,messa,long_tones,studio,44100,17.73,,,FULL/male11/long_tones/messa/m11_long_messa_a.wav
+vocalset_m11_spoken_excerpts,vocalset,m11,male,spoken,excerpts,studio,44100,13.54,,,FULL/male11/excerpts/spoken/m11_row_spoken.wav
+vocalset_m11_straight_excerpts,vocalset,m11,male,straight,excerpts,studio,44100,36.93,,,FULL/male11/excerpts/straight/m11_caro_straight.wav
+vocalset_m11_vibrato_excerpts,vocalset,m11,male,vibrato,excerpts,studio,44100,36.98,,,FULL/male11/excerpts/vibrato/m11_caro_vibrato.wav
+vocalset_m11_vocal_fry_arpeggios,vocalset,m11,male,vocal fry,arpeggios,studio,44100,7.91,,,FULL/male11/arpeggios/vocal_fry/m11_arpeggios_vocal_fry_a.wav
+vocalset_m2_belt_arpeggios,vocalset,m2,male,belt,arpeggios,studio,44100,5.45,,,FULL/male2/arpeggios/belt/m2_arpeggios_belt_a.wav
+vocalset_m2_breathy_arpeggios,vocalset,m2,male,breathy,arpeggios,studio,44100,8.50,,,FULL/male2/arpeggios/breathy/m2_arpeggios_breathy_a.wav
+vocalset_m2_fast_forte_arpeggios,vocalset,m2,male,fast forte,arpeggios,studio,44100,2.22,,,FULL/male2/arpeggios/fast_forte/m2_arpeggios_c_fast_forte_a.wav
+vocalset_m2_lip_trill_arpeggios,vocalset,m2,male,lip trill,arpeggios,studio,44100,8.70,,,FULL/male2/arpeggios/lip_trill/m2_arpeggios_lip_trill_a.wav
+vocalset_m2_messa_long_tones,vocalset,m2,male,messa,long_tones,studio,44100,10.96,,,FULL/male2/long_tones/messa/m2_long_messa_a.wav
+vocalset_m2_spoken_excerpts,vocalset,m2,male,spoken,excerpts,studio,44100,9.06,,,FULL/male2/excerpts/spoken/m2_row_spoken.wav
+vocalset_m2_straight_excerpts,vocalset,m2,male,straight,excerpts,studio,44100,32.92,,,FULL/male2/excerpts/straight/m2_caro_straight.wav
+vocalset_m2_vibrato_excerpts,vocalset,m2,male,vibrato,excerpts,studio,44100,33.19,,,FULL/male2/excerpts/vibrato/m2_caro_vibrato.wav
+vocalset_m2_vocal_fry_arpeggios,vocalset,m2,male,vocal fry,arpeggios,studio,44100,8.80,,,FULL/male2/arpeggios/vocal_fry/m2_arpeggios_vocal_fry_a.wav
+vocalset_m3_belt_arpeggios,vocalset,m3,male,belt,arpeggios,studio,44100,9.34,,,FULL/male3/arpeggios/belt/m3_arpeggios_belt_a.wav
+vocalset_m3_breathy_arpeggios,vocalset,m3,male,breathy,arpeggios,studio,44100,7.69,,,FULL/male3/arpeggios/breathy/m3_arpeggios_breathy_a.wav
+vocalset_m3_fast_forte_arpeggios,vocalset,m3,male,fast forte,arpeggios,studio,44100,2.32,,,FULL/male3/arpeggios/fast_forte/m3_arpeggios_c_fast_forte_a.wav
+vocalset_m3_lip_trill_arpeggios,vocalset,m3,male,lip trill,arpeggios,studio,44100,9.44,,,FULL/male3/arpeggios/lip_trill/m3_arpeggios_lip_trill_a.wav
+vocalset_m3_messa_long_tones,vocalset,m3,male,messa,long_tones,studio,44100,18.74,,,FULL/male3/long_tones/messa/m3_long_messa_a.wav
+vocalset_m3_spoken_excerpts,vocalset,m3,male,spoken,excerpts,studio,44100,10.23,,,FULL/male3/excerpts/spoken/m3_row_spoken.wav
+vocalset_m3_straight_excerpts,vocalset,m3,male,straight,excerpts,studio,44100,39.37,,,FULL/male3/excerpts/straight/m3_caro_straight.wav
+vocalset_m3_vibrato_excerpts,vocalset,m3,male,vibrato,excerpts,studio,44100,41.46,,,FULL/male3/excerpts/vibrato/m3_caro_vibrato.wav
+vocalset_m3_vocal_fry_arpeggios,vocalset,m3,male,vocal fry,arpeggios,studio,44100,10.90,,,FULL/male3/arpeggios/vocal_fry/m3_arpeggios_vocal_fry_a.wav
+vocalset_m4_belt_arpeggios,vocalset,m4,male,belt,arpeggios,studio,44100,7.82,,,FULL/male4/arpeggios/belt/m4_arpeggios_belt_a.wav
+vocalset_m4_breathy_arpeggios,vocalset,m4,male,breathy,arpeggios,studio,44100,6.74,,,FULL/male4/arpeggios/breathy/m4_arpeggios_breathy_a.wav
+vocalset_m4_fast_forte_arpeggios,vocalset,m4,male,fast forte,arpeggios,studio,44100,2.93,,,FULL/male4/arpeggios/fast_forte/m4_arpeggios_c_fast_forte_a.wav
+vocalset_m4_lip_trill_arpeggios,vocalset,m4,male,lip trill,arpeggios,studio,44100,8.19,,,FULL/male4/arpeggios/lip_trill/m4_arpeggios_lip_trill_a.wav
+vocalset_m4_messa_long_tones,vocalset,m4,male,messa,long_tones,studio,44100,13.45,,,FULL/male4/long_tones/messa/m4_long_messa_a.wav
+vocalset_m4_spoken_excerpts,vocalset,m4,male,spoken,excerpts,studio,44100,9.71,,,FULL/male4/excerpts/spoken/m4_ row_spoken.wav
+vocalset_m4_straight_excerpts,vocalset,m4,male,straight,excerpts,studio,44100,32.51,,,FULL/male4/excerpts/straight/m4_caro_straight.wav
+vocalset_m4_vibrato_excerpts,vocalset,m4,male,vibrato,excerpts,studio,44100,34.57,,,FULL/male4/excerpts/vibrato/m4_caro_vibrato.wav
+vocalset_m4_vocal_fry_arpeggios,vocalset,m4,male,vocal fry,arpeggios,studio,44100,6.26,,,FULL/male4/arpeggios/vocal_fry/m4_arpeggios_vocal_fry_a.wav
+vocalset_m5_belt_arpeggios,vocalset,m5,male,belt,arpeggios,studio,44100,4.54,,,FULL/male5/arpeggios/belt/m5_arpeggios_belt_a.wav
+vocalset_m5_breathy_arpeggios,vocalset,m5,male,breathy,arpeggios,studio,44100,6.79,,,FULL/male5/arpeggios/breathy/m5_arpeggios_breathy_a.wav
+vocalset_m5_fast_forte_arpeggios,vocalset,m5,male,fast forte,arpeggios,studio,44100,3.40,,,FULL/male5/arpeggios/fast_forte/m5_arpeggios_c_fast_forte_a.wav
+vocalset_m5_lip_trill_arpeggios,vocalset,m5,male,lip trill,arpeggios,studio,44100,6.34,,,FULL/male5/arpeggios/lip_trill/m5_arpeggios_lip_trill_a.wav
+vocalset_m5_messa_long_tones,vocalset,m5,male,messa,long_tones,studio,44100,19.89,,,FULL/male5/long_tones/messa/m5_long_messa_a.wav
+vocalset_m5_spoken_excerpts,vocalset,m5,male,spoken,excerpts,studio,44100,9.33,,,FULL/male5/excerpts/spoken/m5_row_spoken.wav
+vocalset_m5_straight_excerpts,vocalset,m5,male,straight,excerpts,studio,44100,42.45,,,FULL/male5/excerpts/straight/m5_caro_straight.wav
+vocalset_m5_vibrato_excerpts,vocalset,m5,male,vibrato,excerpts,studio,44100,41.73,,,FULL/male5/excerpts/vibrato/m5_caro_vibrato.wav
+vocalset_m5_vocal_fry_arpeggios,vocalset,m5,male,vocal fry,arpeggios,studio,44100,9.44,,,FULL/male5/arpeggios/vocal_fry/m5_arpeggios_vocal_fry_a.wav
+vocalset_m6_belt_arpeggios,vocalset,m6,male,belt,arpeggios,studio,44100,8.73,,,FULL/male6/arpeggios/belt/m6_arpeggios_belt_a.wav
+vocalset_m6_breathy_arpeggios,vocalset,m6,male,breathy,arpeggios,studio,44100,7.61,,,FULL/male6/arpeggios/breathy/m6_arpeggios_breathy_a.wav
+vocalset_m6_fast_forte_arpeggios,vocalset,m6,male,fast forte,arpeggios,studio,44100,2.61,,,FULL/male6/arpeggios/fast_forte/m6_arpeggios_c_fast_forte_e.wav
+vocalset_m6_lip_trill_arpeggios,vocalset,m6,male,lip trill,arpeggios,studio,44100,6.31,,,FULL/male6/arpeggios/lip_trill/m6_arpeggios_lip_trill_a.wav
+vocalset_m6_messa_long_tones,vocalset,m6,male,messa,long_tones,studio,44100,12.34,,,FULL/male6/long_tones/messa/m6_long_messa_a.wav
+vocalset_m6_spoken_excerpts,vocalset,m6,male,spoken,excerpts,studio,44100,15.75,,,FULL/male6/excerpts/spoken/m6_row_spoken.wav
+vocalset_m6_straight_excerpts,vocalset,m6,male,straight,excerpts,studio,44100,39.32,,,FULL/male6/excerpts/straight/m6_caro_straight.wav
+vocalset_m6_vibrato_excerpts,vocalset,m6,male,vibrato,excerpts,studio,44100,41.50,,,FULL/male6/excerpts/vibrato/m6_caro_vibrato.wav
+vocalset_m6_vocal_fry_arpeggios,vocalset,m6,male,vocal fry,arpeggios,studio,44100,8.39,,,FULL/male6/arpeggios/vocal_fry/m6_arpeggios_vocal_fry_a.wav
+vocalset_m7_belt_arpeggios,vocalset,m7,male,belt,arpeggios,studio,44100,7.33,,,FULL/male7/arpeggios/belt/m7_arpeggios_belt_a.wav
+vocalset_m7_breathy_arpeggios,vocalset,m7,male,breathy,arpeggios,studio,44100,6.33,,,FULL/male7/arpeggios/breathy/m7_arpeggios_breathy_a.wav
+vocalset_m7_fast_forte_arpeggios,vocalset,m7,male,fast forte,arpeggios,studio,44100,2.04,,,FULL/male7/arpeggios/fast_forte/m7_arpeggios_c_fast_forte_a.wav
+vocalset_m7_lip_trill_arpeggios,vocalset,m7,male,lip trill,arpeggios,studio,44100,5.21,,,FULL/male7/arpeggios/lip_trill/m7_arpeggios_lip_trill_a.wav
+vocalset_m7_messa_long_tones,vocalset,m7,male,messa,long_tones,studio,44100,25.48,,,FULL/male7/long_tones/messa/m7_long_messa_a.wav
+vocalset_m7_spoken_excerpts,vocalset,m7,male,spoken,excerpts,studio,44100,13.39,,,FULL/male7/excerpts/spoken/m7_row_spoken.wav
+vocalset_m7_straight_excerpts,vocalset,m7,male,straight,excerpts,studio,44100,40.57,,,FULL/male7/excerpts/straight/m7_caro_straight.wav
+vocalset_m7_vibrato_excerpts,vocalset,m7,male,vibrato,excerpts,studio,44100,40.56,,,FULL/male7/excerpts/vibrato/m7_caro_vibrato.wav
+vocalset_m7_vocal_fry_arpeggios,vocalset,m7,male,vocal fry,arpeggios,studio,44100,8.90,,,FULL/male7/arpeggios/vocal_fry/m7_arpeggios_vocal_fry_a.wav
+vocalset_m8_belt_arpeggios,vocalset,m8,male,belt,arpeggios,studio,44100,5.67,,,FULL/male8/arpeggios/belt/m8_arpeggios_belt_a.wav
+vocalset_m8_breathy_arpeggios,vocalset,m8,male,breathy,arpeggios,studio,44100,6.62,,,FULL/male8/arpeggios/breathy/m8_arpeggios_breathy_a.wav
+vocalset_m8_fast_forte_arpeggios,vocalset,m8,male,fast forte,arpeggios,studio,44100,2.20,,,FULL/male8/arpeggios/fast_forte/m8_arpeggios_c_fast_forte_a.wav
+vocalset_m8_lip_trill_arpeggios,vocalset,m8,male,lip trill,arpeggios,studio,44100,6.47,,,FULL/male8/arpeggios/lip_trill/m8_arpeggios_lip_trill_a.wav
+vocalset_m8_messa_long_tones,vocalset,m8,male,messa,long_tones,studio,44100,11.06,,,FULL/male8/long_tones/messa/m8_long_messa_a.wav
+vocalset_m8_spoken_excerpts,vocalset,m8,male,spoken,excerpts,studio,44100,13.33,,,FULL/male8/excerpts/spoken/m8_row_spoken.wav
+vocalset_m8_straight_excerpts,vocalset,m8,male,straight,excerpts,studio,44100,43.60,,,FULL/male8/excerpts/straight/m8_caro_straight.wav
+vocalset_m8_vibrato_excerpts,vocalset,m8,male,vibrato,excerpts,studio,44100,23.01,,,FULL/male8/excerpts/vibrato/m8_dona_vibrato.wav
+vocalset_m8_vocal_fry_arpeggios,vocalset,m8,male,vocal fry,arpeggios,studio,44100,8.20,,,FULL/male8/arpeggios/vocal_fry/m8_arpeggios_vocal_fry_a.wav
+vocalset_m9_belt_arpeggios,vocalset,m9,male,belt,arpeggios,studio,44100,7.68,,,FULL/male9/arpeggios/belt/m9_arpeggios_belt_a.wav
+vocalset_m9_breathy_arpeggios,vocalset,m9,male,breathy,arpeggios,studio,44100,7.71,,,FULL/male9/arpeggios/breathy/m9_arpeggios_breathy_a.wav
+vocalset_m9_fast_forte_arpeggios,vocalset,m9,male,fast forte,arpeggios,studio,44100,2.53,,,FULL/male9/arpeggios/fast_forte/m9_arpeggios_c_fast_forte_a.wav
+vocalset_m9_lip_trill_arpeggios,vocalset,m9,male,lip trill,arpeggios,studio,44100,5.18,,,FULL/male9/arpeggios/lip_trill/m9_arpeggios_lip_trill_a.wav
+vocalset_m9_messa_long_tones,vocalset,m9,male,messa,long_tones,studio,44100,15.59,,,FULL/male9/long_tones/messa/m9_long_messa_a.wav
+vocalset_m9_spoken_excerpts,vocalset,m9,male,spoken,excerpts,studio,44100,10.97,,,FULL/male9/excerpts/spoken/m9_row_spoken.wav
+vocalset_m9_straight_excerpts,vocalset,m9,male,straight,excerpts,studio,44100,42.92,,,FULL/male9/excerpts/straight/m9_caro_straight.wav
+vocalset_m9_vibrato_excerpts,vocalset,m9,male,vibrato,excerpts,studio,44100,42.77,,,FULL/male9/excerpts/vibrato/m9_caro_vibrato.wav
+vocalset_m9_vocal_fry_arpeggios,vocalset,m9,male,vocal fry,arpeggios,studio,44100,8.34,,,FULL/male9/arpeggios/vocal_fry/m9_arpeggios_vocal_fry_a.wav
