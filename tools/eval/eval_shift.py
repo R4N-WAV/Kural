@@ -12,6 +12,8 @@ For each track × algorithm × interval, with formants preserved (formant shift 
                 Small = formants kept in place; a plain resampling shifter moves them with the pitch.
   ghost of lead energy left at the original pitch's harmonics relative to the new pitch's harmonics
                 (dB, median): period repetition puts it there and it sounds buzzy/robotic; lower = cleaner
+  ghost excess  the same measure minus the input's own energy at the same places between its harmonics
+                (breath, jitter and vibrato put some there in any voice): 0 dB = no added ghost
   periodicity   output periodicity (detector confidence) relative to the input's: below 1 means
                 roughness, phasiness or doubled pulses the input did not have
   level         output RMS vs input RMS on voiced frames (dB)
@@ -113,7 +115,7 @@ def evaluate(track, sr_in, x, t_in, f0_in, v_in, conf_in, y, t_out, f0_out, v_ou
     vin = (v_in == 3) & (f0_in > 0)
     # output frame for input time t is at t + offset
     on, errs, periods_in, periods_out = 0, [], [], []
-    env_d, n_env, rough_d = [], 0, []
+    env_d, n_env, rough_d, excess_d = [], 0, [], []
     for ti, fi in zip(t_in[vin], f0_in[vin]):
         j = np.searchsorted(t_out, ti + offset_s)
         if j <= 0 or j >= len(t_out):
@@ -140,9 +142,15 @@ def evaluate(track, sr_in, x, t_in, f0_in, v_in, conf_in, y, t_out, f0_out, v_ou
             continue
         p = min(sr / fi, sr / (fi * ratio))
         if fi * ratio >= 90 and abs(ratio - 1) > 0.02:
-            g = ghost_db(ys, sr, fi, fi * ratio)
-            if g is not None:
-                rough_d.append(g)
+            # 10 periods of the output / of the input, so window leakage is the same relative to the harmonics
+            no, ni = int(10 * sr / (fi * ratio)), int(10 * sr / fi)
+            co, ci = b + N // 2, a + N // 2
+            yg = y[max(0, co - no // 2): co - no // 2 + no]
+            xg = x[max(0, ci - ni // 2): ci - ni // 2 + ni]
+            g = ghost_db(yg, sr, fi, fi * ratio) if len(yg) == no else None
+            g0 = ghost_db(xg, sr, fi / ratio, fi) if len(xg) == ni else None   # the input's own energy at the same places
+            if g is not None and g0 is not None:
+                rough_d.append(g); excess_d.append(g - g0)
         ex, ey = envelope_db(xs, sr, p), envelope_db(ys, sr, p)
         f = np.fft.rfftfreq(N, 1 / sr)
         # compare only where the input envelope carries energy (within 40 dB of its peak in the band):
@@ -159,7 +167,7 @@ def evaluate(track, sr_in, x, t_in, f0_in, v_in, conf_in, y, t_out, f0_out, v_ou
         a = int(ti * sr) - 1024; b = int((ti + offset_s) * sr) - 1024
         if a >= 0 and b >= 0 and a + 2048 <= len(x) and b + 2048 <= len(y):
             lv.append(20 * np.log10((np.sqrt(np.mean(y[b:b + 2048] ** 2)) + 1e-9) / (np.sqrt(np.mean(x[a:a + 2048] ** 2)) + 1e-9)))
-    return dict(total=total, on=on, errs=errs, env=env_d, per=per, level=lv, rough=rough_d)
+    return dict(total=total, on=on, errs=errs, env=env_d, per=per, level=lv, rough=rough_d, excess=excess_d)
 
 
 def main():
@@ -188,7 +196,7 @@ def main():
                 if r['dataset'] == ds and label == key and r['id'] not in ids:
                     ids.append(r['id']); break
         ids += [r['id'] for r in rows.values() if r['dataset'] == 'vocadito'][:max(0, DEFAULT_TRACKS - len(ids))]
-    res = defaultdict(lambda: dict(total=0, on=0, errs=[], env=[], per=[], level=[], cpu=[], lat=0.0, rough=[]))
+    res = defaultdict(lambda: dict(total=0, on=0, errs=[], env=[], per=[], level=[], cpu=[], lat=0.0, rough=[], excess=[]))
     for tid in ids:
         r = rows[tid]
         wav = os.path.join(work, 'wav', tid + '.wav')
@@ -211,14 +219,14 @@ def main():
                 e = evaluate(tid, sr, x, t_in, f0_in, v_in, c_in, y, t_o, f0_o, v_o, c_o, 2 ** (s / 12), off / sr, sr)
                 for key in ((algo, s), (algo, 'all')) if s != 0 else ((algo, s),):
                     R = res[key]
-                    R['total'] += e['total']; R['on'] += e['on']; R['errs'] += e['errs']; R['env'] += e['env']; R['rough'] += e['rough']
+                    R['total'] += e['total']; R['on'] += e['on']; R['errs'] += e['errs']; R['env'] += e['env']; R['rough'] += e['rough']; R['excess'] += e['excess']
                     R['per'].append(e['per']); R['level'] += e['level']; R['cpu'].append(100 * proc / aud)
                     R['lat'] = 1000 * lat / sr
             print('done', tid, flush=True)
     lines = ['# Pitch shifter comparison on real vocals', '',
              f'Tracks ({len(ids)}): ' + ', '.join(ids), '',
-             '| Algorithm | Shift | On pitch | Pitch error | Formant shift | Ghost of lead | Periodicity | Level | CPU (1 voice) | Latency |',
-             '|---|---|---|---|---|---|---|---|---|---|']
+             '| Algorithm | Shift | On pitch | Pitch error | Formant shift | Ghost of lead | Ghost excess | Periodicity | Level | CPU (1 voice) | Latency |',
+             '|---|---|---|---|---|---|---|---|---|---|---|']
     for algo in ALGOS:
         for s in SHIFTS + ['all']:
             R = res[(algo, s)]
@@ -226,6 +234,7 @@ def main():
                 continue
             lines.append(f"| {algo} | {s if s == 'all' else ('0 (floor)' if s == 0 else f'{s:+d}')} | {100 * R['on'] / R['total']:.1f} % | "
                          f"{np.median(R['errs']) if R['errs'] else float('nan'):.1f} c | {np.mean(R['env']):.2f} dB | {np.median(R['rough']) if R['rough'] else float('nan'):+.1f} dB | "
+                         f"{np.median(R['excess']) if R['excess'] else float('nan'):+.1f} dB | "
                          f"{np.mean(R['per']):.2f} | {np.median(R['level']):+.1f} dB | {np.mean(R['cpu']):.2f} % | {R['lat']:.1f} ms |")
     text = '\n'.join(lines) + '\n'
     print(text)

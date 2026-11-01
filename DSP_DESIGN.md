@@ -185,6 +185,25 @@ PSOLA −31.9 dB before (phase vocoder −36.3, ATELIER −34.0). Grains are now
 periods around each synthesis point: −36.4 dB overall, +12 st −34.0 → −48.3 dB, +4 st −33.8 → −36.7;
 −5 st unchanged (−28.4 dB) — downward shifts still need work.
 
+**Downward shifts, investigated further (8 singers, −5/−7 st):**
+- The ghost measure was biased against downward shifts: a fixed 46 ms window has the same width in
+  Hz for every voice, so with the narrower harmonic spacing of a lowered voice its leakage reached the
+  measured bins. It now uses 10 periods of the voice being measured, and a new column, *ghost excess*,
+  subtracts the input's own energy at the same places between its harmonics (breath, jitter and
+  vibrato put some there in any voice). With the fair measure, PSOLA adds +2.9 dB at −5 st and +3.1 dB
+  at −7 st; a plain resampler (ATELIER tap) adds +1.8/+2.0, the phase vocoder +6.6/+6.6. Downward PSOLA
+  is close to the floor of the method, not broken.
+- Tried and rejected (measured worse, kept out of the code):
+  - narrower grains for downward shifts (0.5–0.8 periods): ghost no better, formant error 2.4 → 3.6 dB;
+  - pulse-anchored marks (snap or pull each mark onto the energy peak of its period): on pitch
+    97.5 → 95.3 %, ghost excess +2.9 → +4.8 dB (the peak picker adds jitter); snap-only: no change;
+  - periodic/aperiodic split (grains from the average of two periods, the rest passed unshifted):
+    jitter leaks the original harmonics into the unshifted part, ghost excess −0.5 → +4.5 dB overall.
+- Finding to act on: on **upward** shifts the excess is negative (−4.0 dB at +4 st): PSOLA leaves *less*
+  breath and turbulence between the harmonics than the singer had, i.e. the shifted voice is
+  over-clean. That is a plausible part of "robotic" and a target for naturalisation (§5): add back
+  aperiodic energy shaped like the input's, without pitch.
+
 **Choice:** TD-PSOLA for the plugin — best formant preservation, exact level, lowest latency of the
 formant-preserving candidates, lowest CPU per voice of the two. The phase vocoder is kept in the code
 for further comparison but not used. The listening test is the final judge (VALIDATION.md).

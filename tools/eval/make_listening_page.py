@@ -60,10 +60,11 @@ section.rec { background: var(--panel); border: 1px solid var(--line); border-ra
 .tag { font-weight: 700; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--orig); flex: none; }
 .g-psola .dot { background: var(--psola); } .g-pv .dot { background: var(--pv); } .g-tap .dot { background: var(--tap); }
+.g-before .dot { background: transparent; box-shadow: inset 0 0 0 2px var(--psola); }
 .g-harmony .dot { background: var(--harm); }
 audio { width: 100%; min-width: 0; height: 36px; }
 .blind .name { display: none; } .blind .letter { display: inline; } .letter { display: none; }
-.blind .g-psola .dot, .blind .g-pv .dot, .blind .g-tap .dot { background: var(--muted); }
+.blind .g-psola .dot, .blind .g-pv .dot, .blind .g-tap .dot, .blind .g-before .dot { background: var(--muted); }
 table { border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 15px; min-width: 640px; }
 th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); }
 th { color: var(--muted); font-weight: 600; font-size: 13px; letter-spacing: .05em; text-transform: uppercase; }
@@ -93,7 +94,7 @@ function shuffle() {
 document.addEventListener('play', e => { document.querySelectorAll('audio').forEach(a => { if (a !== e.target) a.pause(); }); }, true);
 """
 
-NAMES = {'original': 'Original', 'psola': 'Kural PSOLA', 'pv': 'Phase vocoder', 'tap': 'ATELIER tap', 'harmony': 'Kural harmonies'}
+NAMES = {'original': 'Original', 'psola': 'Kural PSOLA', 'pv': 'Phase vocoder', 'tap': 'ATELIER tap', 'harmony': 'Kural harmonies', 'before': 'Kural PSOLA (before)'}
 
 
 def main():
@@ -109,6 +110,7 @@ def main():
              f'<p class="muted">{html.escape(spec.get("intro", ""))}</p></header>',
              '<div class="controls"><button id="blind" type="button" aria-pressed="false">Hide names (blind)</button>'
              '<div class="legend"><span><i class="dot" style="background:var(--psola)"></i>Kural PSOLA</span>'
+             '<span><i class="dot" style="box-shadow:inset 0 0 0 2px var(--psola)"></i>PSOLA before the update</span>'
              '<span><i class="dot" style="background:var(--pv)"></i>Phase vocoder</span>'
              '<span><i class="dot" style="background:var(--tap)"></i>ATELIER tap (baseline)</span>'
              '<span><i class="dot" style="background:var(--harm)"></i>Full harmonies</span></div></div>']
@@ -117,7 +119,7 @@ def main():
         parts.append(f'<div><h2>{html.escape(sec["title"])}</h2><p class="muted">{html.escape(sec.get("note", ""))}</p></div>')
         for c in sec['clips']:
             g = c['group']
-            shuffle = ' shuffle' if g in ('psola', 'pv', 'tap') else ''
+            shuffle = ' shuffle' if g in ('psola', 'pv', 'tap', 'before') else ''
             label = html.escape(c.get('label', NAMES.get(g, g)))
             parts.append(f'<div class="row g-{g}{shuffle}"><div class="tag"><i class="dot"></i>'
                          f'<span class="name">{label}</span><span class="letter"></span></div>'
