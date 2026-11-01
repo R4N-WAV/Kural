@@ -6,7 +6,7 @@
 - [x] CMake/JUCE 8.0.8 project, framework-free `KuralDsp` library
 - [x] VST3 foundation: buses (mono/stereo → stereo, mono → mono), MIDI input declared, output gain, click-free bypass, zero latency, versioned state
 - [x] Pitch detector (YIN + decimation + confidence + voicing + octave guards + time stamps)
-- [x] 28 DSP accuracy/robustness tests (all pass); three detector bugs found by them and fixed
+- [x] 30 DSP accuracy/robustness tests (all pass); four detector weaknesses found by them and fixed (one only visible on Windows CI)
 - [x] Stress test: 6 sample rates × 4 block patterns × 3 layouts, hostile signals, automation, bypass, state, re-prepare, editor lifecycle, no allocation on the audio thread (90 checks, all pass on Linux)
 - [x] Editor: Tamil logo குரல் (shaping checked in a headless render), live pitch display from real frames, input meter, output knob, bypass, scalable
 - [x] Installer (Inno Setup, dark wizard, artwork with correctly shaped Tamil), CI install/validate/uninstall test
@@ -29,6 +29,7 @@
 
 ## Known issues / limitations
 - Real recorded vocals not tested yet; all accuracy figures come from synthetic signals.
+- Very breathy singing (aspiration within ~10 dB of the voice): ~3–4 % of voiced frames still have octave errors on synthetic tests.
 - Pitch reported ~18 ms after the fact (half the analysis window); fine for display, handled by look-ahead in the harmony engine.
 - Linux test builds need `CXXFLAGS="-DJUCE_USE_XRANDR=0 -DJUCE_USE_XINERAMA=0 -DJUCE_USE_XCURSOR=0 -DJUCE_USE_XRENDER=0 -DJUCE_USE_XSHM=0"` at configure time when the X11 extension headers are missing (JUCE's helper tool is built without the project's definitions).
 - Installer is not code-signed (SmartScreen warning on first run).

@@ -28,6 +28,32 @@ void report (bool ok, const std::string& what)
 
 double cents (double f, double ref) { return 1200.0 * std::log2 (f / ref); }
 
+// Portable Gaussian noise. std::mt19937's output is fixed by the C++ standard, but
+// std::normal_distribution is not: libstdc++ and MSVC produce different numbers from the same
+// seed, which once made a breathy-voice test pass on Linux and fail on Windows. Box-Muller on raw
+// mt19937 output gives the same noise on every platform.
+struct Gauss
+{
+    explicit Gauss (unsigned seed, double sd) : rng (seed), sigma (sd) {}
+    double operator()()
+    {
+        if (has) { has = false; return spare * sigma; }
+        double u, v, r;
+        do
+        {
+            u = 2.0 * ((rng() + 0.5) / 4294967296.0) - 1.0;
+            v = 2.0 * ((rng() + 0.5) / 4294967296.0) - 1.0;
+            r = u * u + v * v;
+        } while (r >= 1.0 || r == 0.0);
+        const double m = std::sqrt (-2.0 * std::log (r) / r);
+        spare = v * m; has = true;
+        return u * m * sigma;
+    }
+    std::mt19937 rng;
+    double sigma, spare = 0.0;
+    bool has = false;
+};
+
 // ---------------------------------------------------------------- signal generators
 // f0 (t) gives the instantaneous pitch; every generator is phase-continuous
 
@@ -70,15 +96,14 @@ std::vector<float> vowel (double fs, double seconds, std::function<double (doubl
     std::vector<float> v ((size_t) (fs * seconds));
     double ph = 0.0;
     double z[3][2] = {};
-    std::mt19937 rng (seed);
-    std::normal_distribution<double> nd (0.0, 1.0);
+    Gauss nd (seed, 1.0);
     const double breath = std::pow (10.0, breathDb / 20.0);
     for (size_t i = 0; i < v.size(); ++i)
     {
         const double f = f0 (i / fs);
         double src = 0.0;
         for (int h = 1; h * f < 0.45 * fs && h < 80; ++h) src += std::sin (h * ph) / (h * h);
-        src += breath * nd (rng);
+        src += breath * nd();
         ph += 2.0 * pi * f / fs;
         double y = src;
         for (int k = 0; k < 3; ++k)                         // cascade of 2-pole resonators
@@ -99,9 +124,8 @@ std::vector<float> vowel (double fs, double seconds, std::function<double (doubl
 std::vector<float> noise (double fs, double seconds, double rmsDb, unsigned seed = 7)
 {
     std::vector<float> v ((size_t) (fs * seconds));
-    std::mt19937 rng (seed);
-    std::normal_distribution<double> nd (0.0, std::pow (10.0, rmsDb / 20.0));
-    for (auto& s : v) s = (float) nd (rng);
+    Gauss nd (seed, std::pow (10.0, rmsDb / 20.0));
+    for (auto& s : v) s = (float) nd();
     return v;
 }
 
@@ -110,9 +134,8 @@ void addNoise (std::vector<float>& v, double snrDb, unsigned seed = 9)
     double e = 0.0;
     for (float s : v) e += (double) s * s;
     const double rms = std::sqrt (e / v.size());
-    std::mt19937 rng (seed);
-    std::normal_distribution<double> nd (0.0, rms * std::pow (10.0, -snrDb / 20.0));
-    for (auto& s : v) s += (float) nd (rng);
+    Gauss nd (seed, rms * std::pow (10.0, -snrDb / 20.0));
+    for (auto& s : v) s += (float) nd();
 }
 
 // ---------------------------------------------------------------- analysis
@@ -284,15 +307,42 @@ int main()
             report (grossPct < 1.0 && voicedPct > (snr > 15 ? 90.0 : 70.0),
                     fmt ("vowel + white noise at %.0f dB SNR: voiced %.1f %%, gross errors %.2f %%", snr, voicedPct, grossPct));
         }
-        int gross = 0, voiced = 0, frames = 0;
-        for (double f : { 196.0, 392.0 })
+        // breathy voices, judged over many noise realisations (a single seed once passed on Linux and
+        // failed on Windows): aspiration noise at −20 and −14 dB below the voice
+        for (double breathDb : { -20.0, -14.0 })
         {
-            auto x = vowel (fs, 0.8, [f] (double) { return f; }, 'a', -14.0, 3);
-            auto s = score (analyse (x, fs), fs, [f] (double) { return f; });
-            gross += s.gross; voiced += s.voiced; frames += s.frames;
+            int gross = 0, voiced = 0, frames = 0;
+            for (unsigned seed = 1; seed <= 12; ++seed)
+                for (double f : { 110.0, 196.0, 392.0 })
+                {
+                    auto x = vowel (fs, 0.8, [f] (double) { return f; }, 'a', breathDb, seed);
+                    auto s = score (analyse (x, fs), fs, [f] (double) { return f; });
+                    gross += s.gross; voiced += s.voiced; frames += s.frames;
+                }
+            const double grossPct = 100.0 * gross / std::max (1, voiced), voicedPct = 100.0 * voiced / std::max (1, frames);
+            report (grossPct < (breathDb < -15.0 ? 0.05 : 0.5) && voicedPct > 90.0,
+                    fmt ("breathy vowel, aspiration %.0f dB, 36 noise realisations: voiced %.1f %%, gross errors %.3f %%", breathDb, voicedPct, grossPct));
         }
-        report (gross == 0 && voiced > frames * 0.8,
-                fmt ("breathy vowel (aspiration noise): voiced %.1f %%, gross %.0f", 100.0 * voiced / std::max (1, frames), gross));
+
+        // a real octave drop must be followed even with breath noise (the continuity guard must not
+        // hold the old pitch): no frame may still read the old note 100 ms after the drop
+        {
+            int stuck = 0, n = 0;
+            for (unsigned seed = 1; seed <= 12; ++seed)
+                for (double hi : { 440.0, 262.0 })
+                {
+                    auto f0 = [hi] (double t) { return t < 0.4 ? hi : hi / 2.0; };
+                    auto x = vowel (fs, 0.8, f0, 'a', -14.0, seed);
+                    for (const auto& q : analyse (x, fs))
+                    {
+                        const double t = q.centreSample / fs;
+                        if (t < 0.5 || q.voicing != Voicing::voiced) continue;
+                        ++n;
+                        if (std::abs (cents (q.f0Hz, hi)) < 100.0) ++stuck;
+                    }
+                }
+            report (stuck == 0 && n > 500, fmt ("octave drop with breath noise followed: %.0f of %.0f frames still on the old note", stuck, n));
+        }
     }
 
     // 7. unvoiced material and silence must not produce a pitch

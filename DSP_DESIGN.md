@@ -33,6 +33,13 @@ only at output samples. Every 5 ms a YIN estimator (de Cheveigné & Kawahara, 20
   can choose 2P; a lag of τ/2 or τ/3 whose raw difference is as small as at τ is preferred.
 - *Continuity:* with no dip under the threshold, a reasonable dip at the previous voiced lag
   (within 60 ms) is kept, avoiding flicker on uncertain frames.
+- *Breath continuity:* with heavy breath noise (coloured by the formants) the double/triple period can
+  genuinely correlate better than the true one within a frame (measured dn 0.07–0.15 at 2P vs
+  0.15–0.26 at P), so no single-frame rule can decide. If the previous frame was voiced at P and the
+  new one lands on 2P/3P while P is still nearly as good (dn(P) ≤ 2·dn(2P) + 0.05), P is kept. A real
+  octave drop is not held back (at the old lag a note an octave lower leaves its odd harmonics
+  uncancelled); tested with drops under breath noise. Found when the Windows CI run produced
+  different breath noise than Linux (see VALIDATION.md) and one frame failed.
 
 **Interpolation on raw `d(τ)`, not `d'(τ)`.** The normalisation multiplies by τ, tilting the minimum
 toward shorter lags. Measured: interpolating on `d'` read 1318 Hz 2.5–3.2 cents sharp; on `d` the
@@ -41,7 +48,7 @@ bias is ≤ 0.21 cents.
 **Time stamps.** Each frame carries the host-sample index of the analysis window centre
 (decimation group delay included), so later stages can align harmony targets with the audio.
 
-**Measured results** (synthetic signals with exactly known pitch; `KuralDspTests`, all 28 pass):
+**Measured results** (synthetic signals with exactly known pitch; `KuralDspTests`, all 30 pass):
 
 | Test | Result |
 |---|---|
@@ -51,10 +58,18 @@ bias is ≤ 0.21 cents.
 | Glide of a fifth in 100 ms + octave jumps | 0 octave errors |
 | Strong 2nd harmonic / missing fundamental, 98–392 Hz | 0 gross errors |
 | Vowel + white noise at 20 dB and 12 dB SNR | 0 % gross errors, 100 % voiced |
-| Breathy vowel (aspiration noise at −14 dB) | 0 gross errors, 99.7 % voiced |
+| Breathy vowel, aspiration −20 dB, 36 noise realisations | 0 % gross errors, 100 % voiced |
+| Breathy vowel, aspiration −14 dB, 36 noise realisations | 0.14 % gross errors, 95.1 % voiced |
+| Octave drop under −14 dB breath noise, 24 realisations | 0 frames left on the old note |
 | White noise / silence / −69 dBFS tone | 0 voiced frames / all silence / treated as silence |
 | Block sizes 1, 37, 4096 | identical frames |
 | Pitch step at 500 ms | reported at 509.7 ms |
+
+Breath noise, wider sweep (120 realisations each, 110/196/392 Hz; tuning seeds 1–40, held-out
+seeds 41–80 shown in brackets): −20 dB 0 % gross; −14 dB 0.12 % (0.09 %); −10 dB 3.2 % (3.7 %),
+down from 0.47 % and 15.7 % before the breath-continuity guard. Very breathy singing (aspiration
+within 10 dB of the voice) therefore still produces occasional octave errors — a known limitation,
+to be re-measured on real recordings.
 
 "Gross error" = more than 50 cents off. These signals prove the algorithm; **real recorded vocals
 have not been tested yet** (see VALIDATION.md).

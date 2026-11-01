@@ -154,6 +154,23 @@ PitchFrame PitchDetector::analyse() noexcept
                 break;
             }
         }
+
+        // continuity: with heavy breath noise (coloured by the formants) the double or triple period
+        // can genuinely correlate better than the true one in a single frame (measured dn 0.07–0.15
+        // at 2P vs 0.15–0.26 at P), so no single-frame rule can tell. If the previous frame was voiced
+        // at P and this one lands on 2P/3P while P is still nearly as good, it is breath, not a new
+        // note. A real octave drop is not held back: at the old lag a note an octave lower leaves its
+        // odd harmonics uncancelled, so its difference there is large (tested).
+        if (prevTau > 0.0f && framesSinceVoiced * cfg.hopMs <= 60.0f)
+            for (int k = 2; k <= 3; ++k)
+                if (std::abs (tau - k * prevTau) <= 0.06f * k * prevTau)
+                {
+                    const int cand = localMinNear ((int) std::lround (prevTau), std::max (2, (int) (prevTau * 0.06f)));
+                    if (cand > 0 && diff[(size_t) cand] * norm <= 2.0 * diff[(size_t) tau] * norm + 0.05
+                        && cmnd[(size_t) cand] < cfg.uncertainLimit)
+                        tau = cand;
+                    break;
+                }
     }
 
     // ---- parabolic interpolation around the chosen lag, on the raw difference function: the

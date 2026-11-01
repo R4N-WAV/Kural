@@ -13,7 +13,7 @@ Only results that were actually run are recorded here. "Pending" means not yet d
 
 ## Automated results (Linux, 1 Nov 2026, version 0.1.0)
 
-- `KuralDspTests`: **28/28 pass** – figures in DSP_DESIGN.md §1.
+- `KuralDspTests`: **30/30 pass** – figures in DSP_DESIGN.md §1.
 - `KuralStress` (full): **90/90 pass**:
   - 44.1, 48, 88.2, 96, 176.4, 192 kHz × blocks of 1, 64, 512, 4096 (random sizes up to 2× the announced size) × layouts 1→1, 1→2, 2→2: finite output, **0 allocations/frees on the audio thread**, pitch frames produced.
   - Hostile input (silence, DC, impulses, Nyquist, +18 dBFS, denormal-range): finite, no allocation.
@@ -25,6 +25,17 @@ Only results that were actually run are recorded here. "Pending" means not yet d
   - Editor created, resized and destroyed 5× (headless).
 - `KuralSnapshot`: editor rendered at 1× and 2×; Tamil logo குரல் shaped correctly (கு ligature, pulli on ல்); pitch line follows the synthetic phrase including glides, vibrato and gaps for the consonant and the breath.
 - Pitch detector CPU: 1.3–1.6 % of one core at 44.1–192 kHz.
+
+## Windows CI history
+
+- Run 1 (commit f6c4208): MSVC build and configure succeeded; the Ubuntu DSP job passed. The Windows
+  DSP test **failed one check**: the breathy-vowel test produced one octave error. Cause: the test
+  used `std::normal_distribution`, which MSVC and libstdc++ implement differently, so Windows saw
+  different breath noise than Linux — and on that noise the detector made an error the Linux seed
+  had hidden. Fixes: portable Gaussian noise in the tests; breathy tests now run over 36 noise
+  realisations with an error-rate limit; a breath-continuity guard in the detector (gross errors at
+  −14 dB breath 0.47 % → 0.12 %, at −10 dB 15.7 % → 3.2 %, confirmed on held-out seeds); a new test
+  that real octave drops are still followed under breath noise.
 
 ## Manual DAW checklist (pending)
 

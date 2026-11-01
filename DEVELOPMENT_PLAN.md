@@ -24,7 +24,7 @@ vocals where audio is involved.
   state save/restore with versioning, zero latency.
 - Editor in the R4N family language with Kural's ocean identity: Tamil logo குரல் (Catamaran),
   live pitch display, input meter, output knob, bypass. Scales as a whole when resized.
-- Tests: DSP accuracy (28 checks), processor robustness incl. no audio-thread allocation (90 checks),
+- Tests: DSP accuracy (30 checks), processor robustness incl. no audio-thread allocation (90 checks),
   headless editor snapshot.
 - Windows CI: build, tests, snapshots, pluginval (strictness 10), Inno Setup installer built,
   installed, validated and uninstalled on a clean runner, release published from `main`.
