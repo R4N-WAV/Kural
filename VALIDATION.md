@@ -69,7 +69,14 @@ For each of FL Studio, Cubase, Reaper:
 - [ ] 1-hour session with transport start/stop: stable
 - MIDI routing: not applicable until Phase 7
 
-## Audio quality validation (pending – starts with Phase 3)
+## Real-vocal measurements (1 Nov 2026)
+
+Test set: branch `test-vocals` (vocadito 40 solo tracks, Dagstuhl ChoirSet 8 quartet tracks with
+manual larynx-mic f0; CC BY 4.0). Pitch detector and shifter results in DSP_DESIGN.md §1 and §2.
+Listening page (A/B, blind option): Kural Listening Test artifact — three singers × three shifters
+at +4 and −5 st, and full harmonies. **Owner's listening verdict: pending.**
+
+## Audio quality validation (listening; remaining)
 
 Real-vocal set needed: low male, high male, female, falsetto, spoken, sustained, fast melodic,
 melisma, vibrato, breathy, strong sibilance, quiet, loud, different recording qualities.

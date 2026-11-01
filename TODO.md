@@ -20,8 +20,9 @@
 - [x] Stress test with harmonies: no allocation, bypass/harmonies-off bit-exact delayed, correct harmony notes
 
 ## Current
-- [ ] Real-vocal test set: first successful workflow run, then detector baseline and shifter comparison on it
-- [ ] Owner: listening review (page) and DAW check in FL Studio, Cubase, Reaper (VALIDATION.md)
+- [x] Real-vocal test set (48 tracks), detector baseline and shifter comparison on it; two PSOLA flaws found and fixed
+- [x] Listening page (A/B, blind option) published
+- [ ] Owner: listening verdict on the page, and DAW check in FL Studio, Cubase, Reaper (VALIDATION.md)
 
 ## Remaining (Phase 3 wrap-up, then Phase 4)
 - [ ] Fixes from the listening review

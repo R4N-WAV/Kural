@@ -7,7 +7,7 @@ vocals where audio is involved.
 | Phase | Deliverable | Status |
 |---|---|---|
 | 1. Research and foundation | Stable, recognisable Kural VST3 foundation | **Done; Windows CI green (build, tests, pluginval 10, installer); DAW check pending (manual)** |
-| 2. Core pitch engine | Reliable vocal analysis | **Implemented and tested on synthetic signals; real-vocal measurement in progress** |
+| 2. Core pitch engine | Reliable vocal analysis | **Done: 96.4 % within 50 c on 40 solo singers (DSP_DESIGN §1)** |
 | 3. First harmony engine | Harmonizer with a few high-quality voices | **In progress (v0.2): 4 voices working in the plugin; listening review by the owner pending** |
 | 4. Expand to 16 voices | Working 16-voice engine, CPU benchmarked | Planned |
 | 5. Naturalness and voice differentiation | Convincing layered stacks | Planned |
@@ -46,10 +46,11 @@ Done:
    over WAV files (`analyse`, `shift`, `bench`, `harmonize`).
 2. Real-vocal test set: the `Fetch test vocals` workflow builds it from vocadito, Dagstuhl ChoirSet
    and VocalSet (all CC BY 4.0) into the `test-vocals` branch with a manifest and attribution
-   (first run in progress).
+   (48 tracks in; VocalSet and more choir singers being added).
 3. Three shifters built (TD-PSOLA, phase vocoder, ATELIER's rotating-tap baseline) and compared on
    synthetic and stand-in material with `tools/eval/eval_shift.py`; TD-PSOLA is used in the plugin.
-   The comparison on real vocals follows once the test set exists.
+   On 12 real singers PSOLA keeps formants best (2.1 dB drift vs 3.0 and 7.8) at exact level;
+   two flaws it showed on real singing were fixed (DSP_DESIGN.md §2).
 4. Harmony planner: 8 scale types + custom, scale-degree intervals, expression kept, vibrato-proof
    note decisions.
 5. HarmonyEngine with up to 16 voices; 4 exposed (interval, octave, fine, formant, level, pan);

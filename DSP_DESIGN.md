@@ -148,7 +148,32 @@ level within 0.42 dB; +4 st on a vibrato line with a glide: median 4.8 c; first 
 noise at exactly the set level; identical output for block sizes 1 and 4096. Phase vocoder: 88 dB
 unshifted, ≤ 0.36 c median error.
 
-**Real-vocal comparison:** §2a below.
+**Real-vocal comparison** (`tools/eval/eval_shift.py`, 12 singers: 8 vocadito solo voices and DCS
+soprano/alto/tenor/bass; −12…+12 st; consonant level 0.3; formants preserved):
+
+| | On pitch (all shifts) | Pitch error | Formant drift | Periodicity | Level | CPU, 1 voice | Latency |
+|---|---|---|---|---|---|---|---|
+| **TD-PSOLA (Kural)** | 91.4 % | 3.1 c | **2.1 dB** | 0.98 | +0.1 dB | 1.6 % | 31 ms |
+| Phase vocoder | 84.9 % | 3.3 c | 3.0 dB | 0.94 | −1.7 dB | 2.1 % | 46 ms |
+| ATELIER rotating tap | 91.7 % | 4.4 c | 7.8 dB | 0.96 | −1.3 dB | 0.2 % | 25 ms |
+
+Unshifted floors: formant drift 0.4 / 1.1 / 0.1 dB. "On pitch" counts input-voiced frames whose
+output is within 50 c of the target; PSOLA leaves consonants unshifted by design, which costs it a
+little here. −12 st is under-counted for every shifter: the bass voices land below the detector's
+60 Hz floor.
+
+**Two PSOLA flaws found on real singing and fixed:**
+- *Drift under vibrato:* synthesis advanced by the period before the chosen mark; it now advances by
+  the distance to the next mark. Unshifted output became the input delayed by exactly the reported
+  latency (51–57 dB local SNR), and the vibrato test error fell from 4.8 to 0.6 cents.
+- *Unshifted note onsets:* 97 % of off-pitch frames were within 40 ms of a voicing edge, i.e. the
+  first periods of every note passed unshifted (an audible dry flam). A mark now counts as voiced if
+  the period after it is periodic too, and the marker probes the recently heard period itself while
+  the detector (≈20 ms late) still says unvoiced. On pitch: 89.5 % → 91.4 % over the 12 singers.
+
+**Choice:** TD-PSOLA for the plugin — best formant preservation, exact level, lowest latency of the
+formant-preserving candidates, lowest CPU per voice of the two. The phase vocoder is kept in the code
+for further comparison but not used. The listening test is the final judge (VALIDATION.md).
 
 **Known limitations:** below 65 Hz grains are clamped (artifacts on very low bass notes); a second
 voice in the input (bleed, doubles) breaks pitch marking; unison voices (ratio 1) sit up to one
