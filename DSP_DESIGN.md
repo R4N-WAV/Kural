@@ -71,8 +71,29 @@ down from 0.47 % and 15.7 % before the breath-continuity guard. Very breathy sin
 within 10 dB of the voice) therefore still produces occasional octave errors — a known limitation,
 to be re-measured on real recordings.
 
-"Gross error" = more than 50 cents off. These signals prove the algorithm; **real recorded vocals
-have not been tested yet** (see VALIDATION.md).
+"Gross error" = more than 50 cents off.
+
+**Measured on real singing** (`tools/eval/eval_pitch.py` on the `test-vocals` branch, 48 tracks,
+160,777 reference-voiced frames; references: vocadito annotations, Dagstuhl ChoirSet manual
+larynx-microphone f0):
+
+| Material | Voicing recall | Within 50 c (RPA) | Octave errors | Median error |
+|---|---|---|---|---|
+| Solo singers (vocadito, 40) | 94.8 % | 96.4 % | 0.99 % | 2.0 c |
+| Choir, headset/handheld mics (DCS quartet, 8) | 95.0 % | 91.0 % | 5.15 % | 2.1 c |
+| — soprano / alto / tenor / bass | 97.6 / 94.0 / 95.3 / 93.2 % | 98.0 / 85.0 / 89.5 / 91.6 % | 0.05 / 7.7 / 6.1 / 6.6 % | 1.2–3.0 c |
+
+- Octave errors are almost all an octave *down* (two periods chosen). On the choir tracks the close
+  mics also pick up the other singers: two voices a fifth apart repeat together every two periods
+  of the lower one, and that common period is found (d′ ≈ 0.02 at 2P against 0.16–0.20 at P). On
+  solo voices the few errors are creaky stretches where alternate cycles differ.
+- A sweep of the threshold (0.15/0.20/0.25) and the double-period guard (0.25/0.10/off) moved RPA
+  only within 94.3–94.9 % overall; the defaults are best on solo voices and were kept.
+- False alarms (Kural voiced where the reference is not): 9.3 % on solo singers (mostly breathy
+  note ends); 35 % on the choir tracks, where the other singers are audible during this singer's rests.
+- Consequence for harmonies: an octave-low reading moves the lead's scale note and the harmony note
+  together, so the shift in semitones is unchanged; only the pitch screen shows the lead an octave
+  low for those frames.
 
 **Cost** (measured, Xeon server core, `-O2`, no SIMD flags): 1.3–1.6 % of one core at any sample
 rate (decimation keeps the work constant), shared by all voices. An FFT-based difference function
@@ -127,7 +148,7 @@ level within 0.42 dB; +4 st on a vibrato line with a glide: median 4.8 c; first 
 noise at exactly the set level; identical output for block sizes 1 and 4096. Phase vocoder: 88 dB
 unshifted, ≤ 0.36 c median error.
 
-**Real-vocal comparison:** see §2a (filled in from `tools/eval/eval_shift.py`).
+**Real-vocal comparison:** §2a below.
 
 **Known limitations:** below 65 Hz grains are clamped (artifacts on very low bass notes); a second
 voice in the input (bleed, doubles) breaks pitch marking; unison voices (ratio 1) sit up to one
