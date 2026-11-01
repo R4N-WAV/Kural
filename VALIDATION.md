@@ -11,20 +11,28 @@ Only results that were actually run are recorded here. "Pending" means not yet d
 | GitHub Actions `ubuntu-24.04` | DSP tests on every push | Green |
 | FL Studio / Cubase / Reaper on Windows 10/11 | Real host loading and use | **Pending (manual; no DAW in the build environment)** |
 
-## Automated results (Linux, 1 Nov 2026, version 0.1.0)
+## Automated results (Linux, 1 Nov 2026, version 0.2.0)
 
-- `KuralDspTests`: **30/30 pass** – figures in DSP_DESIGN.md §1.
-- `KuralStress` (full): **90/90 pass**:
+- `KuralDspTests`: **54/54 pass** – pitch detection (30), harmony planning (16), pitch shifting (8).
+  Figures in DSP_DESIGN.md §1–§3.
+- `KuralStress` (full): **92/92 pass**, with the harmony engine running (default: two voices):
   - 44.1, 48, 88.2, 96, 176.4, 192 kHz × blocks of 1, 64, 512, 4096 (random sizes up to 2× the announced size) × layouts 1→1, 1→2, 2→2: finite output, **0 allocations/frees on the audio thread**, pitch frames produced.
   - Hostile input (silence, DC, impulses, Nyquist, +18 dBFS, denormal-range): finite, no allocation.
-  - Output gain and bypass automated every block: no allocation, largest sample step 0.248 on a vocal-like signal (smoothing works).
-  - Bypass parameter and 0 dB: bit-exact pass-through, latency 0. Host bypass: crossfade with no jump (largest step 0.011), bit-exact after the fade.
-  - −6 dB measured as ×0.5012. Mono in on stereo out reaches both channels.
-  - State round trip; state version saved; older state with a missing parameter falls back to the default; garbage state ignored.
-  - Re-prepared at changing sample rates/block sizes: finite, no allocation.
-  - Editor created, resized and destroyed 5× (headless).
-- `KuralSnapshot`: editor rendered at 1× and 2×; Tamil logo குரல் shaped correctly (கு ligature, pulli on ல்); pitch line follows the synthetic phrase including glides, vibrato and gaps for the consonant and the breath.
-- Pitch detector CPU: 1.3–1.6 % of one core at 44.1–192 kHz.
+  - Output gain and bypass automated every block: no allocation, largest sample step 0.248.
+  - Bypass parameter, and harmonies off at 0 dB: exactly the input delayed by the reported latency (1493 samples at 48 kHz), bit for bit. Host bypass: crossfade without a jump, then the delayed input bit-exact.
+  - **Harmony note:** a sung C4, voice 1 a third above, dry off → 329.7 Hz (E4, expected 329.6) in C major and 311.2 Hz (E♭4, expected 311.1) in C minor.
+  - −6 dB measured as ×0.5012; mono in on stereo out reaches both channels; state round trip, version, older-state defaults, garbage state; re-prepare at changing rates/blocks; editor created/resized/destroyed 5×.
+- `KuralSnapshot`: editor rendered with the default voices on a synthetic phrase: the voice lines sit a
+  scale-correct third above and below the lead (G→B/E, A→C/F, B→D/G, D→F/B); Tamil logo shaped correctly.
+- **CPU** (`KuralLab bench`, 20 s sung line at 48 kHz, one Xeon server core, Release build, analysis included):
+
+  | Voices | 1 | 4 | 8 | 12 | 16 |
+  |---|---|---|---|---|---|
+  | TD-PSOLA (in the plugin) | 1.8 % | 2.6 % | 3.5 % | 4.3 % | 5.5 % |
+  | Phase vocoder (compared) | 2.6 % | 3.5 % | – | – | 7.0 % |
+
+  Desktop CPUs are typically faster per core than this server core; to be re-measured in a DAW on Windows.
+- **Latency:** 1493 samples at 48 kHz (31.1 ms), 1373 at 44.1 kHz, 2970 at 96 kHz; reported to the host.
 
 ## Windows CI history
 

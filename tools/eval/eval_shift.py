@@ -6,8 +6,9 @@ usage: eval_shift.py <test-vocals dir> <KuralLab binary> <work dir> [report.md] 
 For each track × algorithm × interval, with formants preserved (formant shift 0):
   on pitch      share of input-voiced frames whose output pitch is within 50 cents of input × ratio
   pitch error   median |cents| on those frames
-  formant shift mean |dB| difference between the input and output spectral envelopes, 300 Hz – 5 kHz
-                (cepstral envelopes, liftered below both pitch periods; level difference removed).
+  formant shift mean |dB| difference between the input and output spectral envelopes, 300 Hz – 5 kHz,
+                where the input envelope is within 40 dB of its peak (cepstral envelopes, liftered below
+                both pitch periods; level difference removed).
                 Small = formants kept in place; a plain resampling shifter moves them with the pitch.
   periodicity   output periodicity (detector confidence) relative to the input's: below 1 means
                 roughness, phasiness or doubled pulses the input did not have
@@ -21,7 +22,7 @@ import numpy as np
 from scipy.io import wavfile
 
 ALGOS = ['psola', 'pv', 'tap']
-SHIFTS = [-12, -7, -5, 3, 4, 7, 12]
+SHIFTS = [0, -12, -7, -5, 3, 4, 7, 12]      # 0 = unshifted: shows the floor of each measure
 DEFAULT_TRACKS = 12
 
 
@@ -53,16 +54,22 @@ def envelope_db(seg, sr, period_samples):
     return 20 / np.log(10) * env
 
 
-def best_offset(x, y, lat, maxp):
-    # PSOLA output sits up to one period after its nominal latency: find the best alignment
+def best_offset(x, y, lat, maxp, sr):
+    # PSOLA and the phase vocoder output exactly at their reported latency. The rotating-tap baseline
+    # wanders around ~W/2, so it is aligned by its level envelope (10 ms RMS), which works for shifted
+    # signals too
+    def env(v):
+        k = int(0.01 * sr)
+        return np.sqrt(np.convolve(v ** 2, np.ones(k) / k, mode='same'))
+    ex, ey = env(x), env(y)
     seg = slice(int(len(x) * 0.2), int(len(x) * 0.8))
-    xs = x[seg]
+    xs = ex[seg] - ex[seg].mean()
     best, bo = -1e9, lat
-    for off in range(lat - 8, lat + int(maxp) + 8, 4):
-        ys = y[seg.start + off: seg.stop + off]
+    for off in range(max(0, lat - int(maxp)), lat + int(maxp), 8):
+        ys = ey[seg.start + off: seg.stop + off]
         if len(ys) < len(xs):
             break
-        c = np.dot(np.abs(xs), np.abs(ys))       # envelope alignment works for shifted signals too
+        c = np.dot(xs, ys - ys.mean())
         if c > best:
             best, bo = c, off
     return bo
@@ -100,7 +107,10 @@ def evaluate(track, sr_in, x, t_in, f0_in, v_in, conf_in, y, t_out, f0_out, v_ou
         p = min(sr / fi, sr / (fi * ratio))
         ex, ey = envelope_db(xs, sr, p), envelope_db(ys, sr, p)
         f = np.fft.rfftfreq(N, 1 / sr)
+        # compare only where the input envelope carries energy (within 40 dB of its peak in the band):
+        # near-silent bins make large log differences out of nothing
         band = (f >= 300) & (f <= 5000)
+        band &= ex >= np.max(ex[band]) - 40.0
         d = ey[band] - ex[band]
         env_d.append(np.mean(np.abs(d - np.mean(d))))
     # periodicity and level
@@ -154,10 +164,10 @@ def main():
                 proc = float(re.search(r'process_s=([\d.]+)', info).group(1))
                 aud = float(re.search(r'audio_s=([\d.]+)', info).group(1))
                 _, y = read(out)
-                off = best_offset(x, y, lat, maxp)
+                off = lat if algo in ('psola', 'pv') else best_offset(x, y, lat, maxp, sr)
                 t_o, f0_o, v_o, c_o = frames(lab, out, out[:-4] + '.csv')
                 e = evaluate(tid, sr, x, t_in, f0_in, v_in, c_in, y, t_o, f0_o, v_o, c_o, 2 ** (s / 12), off / sr, sr)
-                for key in ((algo, s), (algo, 'all')):
+                for key in ((algo, s), (algo, 'all')) if s != 0 else ((algo, s),):
                     R = res[key]
                     R['total'] += e['total']; R['on'] += e['on']; R['errs'] += e['errs']; R['env'] += e['env']
                     R['per'].append(e['per']); R['level'] += e['level']; R['cpu'].append(100 * proc / aud)
@@ -172,7 +182,7 @@ def main():
             R = res[(algo, s)]
             if not R['total']:
                 continue
-            lines.append(f"| {algo} | {s if s == 'all' else f'{s:+d}'} | {100 * R['on'] / R['total']:.1f} % | "
+            lines.append(f"| {algo} | {s if s == 'all' else ('0 (floor)' if s == 0 else f'{s:+d}')} | {100 * R['on'] / R['total']:.1f} % | "
                          f"{np.median(R['errs']) if R['errs'] else float('nan'):.1f} c | {np.mean(R['env']):.2f} dB | "
                          f"{np.mean(R['per']):.2f} | {np.median(R['level']):+.1f} dB | {np.mean(R['cpu']):.2f} % | {R['lat']:.1f} ms |")
     text = '\n'.join(lines) + '\n'

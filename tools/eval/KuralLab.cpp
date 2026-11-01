@@ -6,13 +6,18 @@
 //       one shifted voice (no dry signal); prints latency and processing time
 //   KuralLab bench <psola|pv> <voices> <in.wav>
 //       CPU time for N voices sharing one analysis (different intervals per voice)
+//   KuralLab harmonize <key 0-11> <scale 0-7> <in.wav> <out.wav> [interval:pan ...]
+//       the full harmony engine as the plugin runs it: dry (delayed by the latency) + voices, stereo.
+//       Voices are given as scale steps and pan, e.g. 2:-0.35 -2:0.35 (default: third above / below)
 //
 // "tap" is the rotating-tap delay shifter of R4N ATELIER (Sonic-Lab, PitchModule, 50 ms grain),
 // ported here as a baseline: it is not pitch-synchronous and does not preserve formants.
+#include "DSP/HarmonyEngine.h"
 #include "DSP/PhaseVocoder.h"
 #include "DSP/PitchDetector.h"
 #include "DSP/Psola.h"
 #include "WavIO.h"
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -76,6 +81,7 @@ double secondsSince (std::chrono::steady_clock::time_point t0)
 int usage()
 {
     std::fprintf (stderr, "usage:\n  KuralLab analyse <in.wav> <frames.csv>\n"
+                          "  KuralLab harmonize <key> <scale> <in.wav> <out.wav> [steps:pan ...]\n"
                           "  KuralLab shift <psola|pv|tap> <semitones> <formant_semis> <unvoiced_gain> <in.wav> <out.wav>\n"
                           "  KuralLab bench <psola|pv> <voices> <in.wav>\n");
     return 2;
@@ -205,6 +211,47 @@ int main (int argc, char** argv)
         else return usage();
         const double secs = secondsSince (t0), audio = (double) in.mono.size() / fs;
         std::printf ("algo=%s voices=%d cpu_percent_one_core=%.2f (checksum %.3g)\n", algo.c_str(), voices, 100.0 * secs / audio, sink);
+        return 0;
+    }
+    if (cmd == "harmonize" && argc >= 6)
+    {
+        Wav in;
+        if (! load (argv[4], in)) return 1;
+        const double fs = in.sampleRate;
+        HarmonyEngine e;
+        e.prepare (fs);
+        HarmonyEngineParams ep;
+        ep.scale = Scale::make (std::atoi (argv[2]), (ScaleType) std::clamp (std::atoi (argv[3]), 0, 7));
+        ep.harmonyGain = std::pow (10.0f, -3.0f / 20.0f);
+        e.setParams (ep);
+        std::vector<std::pair<int, float>> vs;
+        for (int a = 6; a < argc; ++a)
+        {
+            const std::string spec = argv[a];
+            const auto c = spec.find (':');
+            vs.push_back ({ std::atoi (spec.substr (0, c).c_str()), c == std::string::npos ? 0.0f : (float) std::atof (spec.substr (c + 1).c_str()) });
+        }
+        if (vs.empty()) vs = { { 2, -0.35f }, { -2, 0.35f } };
+        for (size_t v = 0; v < vs.size() && v < (size_t) HarmonyEngine::maxVoices; ++v)
+        {
+            HarmonyVoiceParams p;
+            p.on = true;
+            p.interval.steps = vs[v].first;
+            p.pan = vs[v].second;
+            e.setVoice ((int) v, p);
+        }
+        const int lat = e.latency();
+        std::vector<float> L (in.mono.size(), 0.0f), R (in.mono.size(), 0.0f);
+        e.process (in.mono.data(), L.data(), R.data(), (int) in.mono.size(), [] (const PitchFrame&, const HarmonyEngine&) {});
+        std::vector<float> st (in.mono.size() * 2);
+        for (size_t i = 0; i < in.mono.size(); ++i)
+        {
+            const float dry = i >= (size_t) lat ? in.mono[i - (size_t) lat] : 0.0f;
+            st[2 * i] = dry + L[i];
+            st[2 * i + 1] = dry + R[i];
+        }
+        if (! kural::tools::writeWavStereo (argv[5], st, fs)) return 1;
+        std::printf ("latency_samples=%d voices=%zu\n", lat, vs.size());
         return 0;
     }
     return usage();

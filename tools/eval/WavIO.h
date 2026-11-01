@@ -65,7 +65,20 @@ inline bool readWav (const std::string& path, Wav& out, std::string& err)
     return true;
 }
 
+inline bool writeWavChannels (const std::string& path, const std::vector<float>& x, double sampleRate, std::uint16_t channels);
+
 inline bool writeWav (const std::string& path, const std::vector<float>& x, double sampleRate)
+{
+    return writeWavChannels (path, x, sampleRate, 1);
+}
+
+// interleaved L R L R ...
+inline bool writeWavStereo (const std::string& path, const std::vector<float>& x, double sampleRate)
+{
+    return writeWavChannels (path, x, sampleRate, 2);
+}
+
+inline bool writeWavChannels (const std::string& path, const std::vector<float>& x, double sampleRate, std::uint16_t channels)
 {
     FILE* f = std::fopen (path.c_str(), "wb");
     if (! f) return false;
@@ -73,8 +86,8 @@ inline bool writeWav (const std::string& path, const std::vector<float>& x, doub
     auto w16 = [&] (std::uint16_t v) { std::fwrite (&v, 2, 1, f); };
     const std::uint32_t bytes = (std::uint32_t) (x.size() * 4);
     std::fwrite ("RIFF", 1, 4, f); w32 (36 + bytes); std::fwrite ("WAVE", 1, 4, f);
-    std::fwrite ("fmt ", 1, 4, f); w32 (16); w16 (3); w16 (1); w32 ((std::uint32_t) sampleRate);
-    w32 ((std::uint32_t) sampleRate * 4); w16 (4); w16 (32);
+    std::fwrite ("fmt ", 1, 4, f); w32 (16); w16 (3); w16 (channels); w32 ((std::uint32_t) sampleRate);
+    w32 ((std::uint32_t) sampleRate * 4 * channels); w16 ((std::uint16_t) (4 * channels)); w16 (32);
     std::fwrite ("data", 1, 4, f); w32 (bytes);
     std::fwrite (x.data(), 4, x.size(), f);
     std::fclose (f);

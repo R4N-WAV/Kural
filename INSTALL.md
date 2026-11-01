@@ -3,8 +3,9 @@
 Kural is a vocal harmonizer, VST3, 64-bit, for Windows 10 and 11. Made for FL Studio, Cubase and
 Reaper; it should work in any VST3 host.
 
-**This is a development build.** It tracks the pitch of your vocal live and shows it on Kural's
-display. The harmony voices are not in this build yet.
+**This is a development build (0.2).** Four harmony voices work: Kural follows the pitch of your
+vocal and sings up to four harmony lines in the key you choose. More voices (up to 16), presets,
+MIDI control and quality modes come in later versions.
 
 ## Install with the setup wizard
 1. Close your music app, then run **Kural-Setup-Windows.exe**.
@@ -23,10 +24,22 @@ display. The harmony voices are not in this build yet.
 - **Reaper:** Options → Preferences → Plug-ins → VST → **Re-scan**. Add it as a track FX.
 
 ## Using this build
-- Put Kural on a vocal track and play the track (or sing through it). The display shows the pitch of the voice as a line moving right to left: the note name and how many cents above or below it, plus how sure the analysis is. Breaths and consonants leave gaps; that is correct.
-- **Output**: level after Kural (−24 to +12 dB, double-click for 0 dB).
-- **Bypass**: passes the input through untouched, crossfaded so it never clicks (also linked to your host's bypass).
-- Kural adds no delay (latency 0 samples) in this build. Settings are saved with your project.
+1. Put Kural on a vocal track (mono or stereo) and set **KEY** and the scale (Major, Natural minor, …)
+   to the song. Harmonies count their intervals along that scale, so a "3rd above" is a major or a
+   minor third as the key requires.
+2. Play the track. The screen shows your vocal as a bright line and each harmony voice as a thinner
+   line in its own colour; the notes the voices are singing appear at the top right.
+3. Each **VOICE** strip: switch it on, pick an interval (or **Semitones** for a fixed distance),
+   add octaves, and set **LEVEL**, **PAN**, **FORMANT** (up = smaller, brighter voice; down = bigger,
+   darker) and **FINE** (detune in cents). Defaults: voice 1 a third above (left), voice 2 a third
+   below (right).
+4. Bottom row: **CONSONANTS** (how much of the "s", "t" and breaths the harmonies carry; they are
+   never pitch-shifted), **GLIDE** (how quickly a voice moves to a new note), **HARMONY** (all voices),
+   **DRY** (your original vocal), **OUTPUT**. **HARMONIES** switches all voices off and leaves the dry vocal.
+5. **BYPASS** passes the input through untouched (also linked to your host's bypass).
+
+Kural delays its output by about 31 ms at 48 kHz (the screen shows the exact figure) and tells your
+host, which compensates automatically. Settings are saved with your project.
 
 ## Troubleshooting
 - **Kural doesn't appear:** check that `C:\Program Files\Common Files\VST3\Kural.vst3` exists, that your host scans that folder, then rescan. In FL Studio, make sure the VST3 folder is in the plugin search paths.

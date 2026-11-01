@@ -56,10 +56,10 @@ CloseApplications=no
 
 [Messages]
 WelcomeLabel1=Welcome to Kural
-WelcomeLabel2=The vocal harmonizer by R4N.%n%nThis is an early development build ({#AppVersion}): it tracks the pitch of your vocal live and shows it on Kural's display. The harmony voices are not in this build yet; they arrive in coming versions.%n%nThis installs Kural (VST3, 64-bit) for FL Studio, Cubase, Reaper and other VST3 hosts.%n%nPlease close your music app before you continue.
+WelcomeLabel2=The vocal harmonizer by R4N.%n%nThis is a development build ({#AppVersion}) with four harmony voices: Kural follows your vocal and sings harmonies in the key you choose. More voices, presets and MIDI control arrive in coming versions.%n%nThis installs Kural (VST3, 64-bit) for FL Studio, Cubase, Reaper and other VST3 hosts.%n%nPlease close your music app before you continue.
 SelectDirLabel3=Kural.vst3 goes into this VST3 folder. The standard folder is right for almost every host; only change it if your host scans a different one.
 FinishedHeadingLabel=Kural is installed
-FinishedLabelNoIcons=Open your music app and rescan your plugins:%n%nFL Studio: Options > Manage plugins > Find installed plugins.%nCubase: Studio > VST Plug-in Manager > Rescan (or restart Cubase).%nReaper: Options > Preferences > Plug-ins > VST > Re-scan.%n%nKural is listed under R4N. Put it on a vocal track and sing or play the track to see its pitch.
+FinishedLabelNoIcons=Open your music app and rescan your plugins:%n%nFL Studio: Options > Manage plugins > Find installed plugins.%nCubase: Studio > VST Plug-in Manager > Rescan (or restart Cubase).%nReaper: Options > Preferences > Plug-ins > VST > Re-scan.%n%nKural is listed under R4N. Put it on a vocal track, set the key, and play the track.
 
 [InstallDelete]
 ; replace an earlier version completely (old and new files are never mixed)

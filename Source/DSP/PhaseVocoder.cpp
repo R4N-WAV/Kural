@@ -170,6 +170,13 @@ void PvVoice::synthesise (const PvAnalysis& a) noexcept
         int k0 = kp, k1 = kp;
         while (k0 > 0 && a.region[(size_t) k0 - 1] == i) --k0;
         while (k1 < B - 1 && a.region[(size_t) k1 + 1] == i) ++k1;
+        if (r < 1.0f)
+        {
+            // shifted down, the peaks end up r times closer: narrow each region by r so neighbouring
+            // regions do not overlap and interfere at their destination
+            k0 = std::max (k0, kp - (int) std::ceil ((float) (kp - k0) * r));
+            k1 = std::min (k1, kp + (int) std::ceil ((float) (k1 - kp) * r));
+        }
         for (int k = k0; k <= k1; ++k)
         {
             const int kd = k + shift;

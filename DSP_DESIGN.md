@@ -83,60 +83,78 @@ about half a window (~18 ms); pitches above 1.5 kHz (whistle register) are not s
 input (doubled vocals, bleed) is not handled; frames straddling a note change are not yet labelled
 as transitions.
 
-## 2. Pitch shifting — Designed (Phase 3), to be benchmarked
+## 2. Pitch shifting — Implemented (TD-PSOLA in the plugin; phase vocoder as the compared alternative)
 
-**Recommendation: a hybrid, chosen per material and quality mode.**
+Three shifters were built and compared (code in `Source/DSP/Psola.*`, `Source/DSP/PhaseVocoder.*`;
+the ATELIER baseline in `tools/eval/KuralLab.cpp`):
 
-| | TD-PSOLA (pitch-synchronous overlap-add) | Phase vocoder + spectral envelope | WSOLA + resampling |
+| | TD-PSOLA (Kural) | Phase vocoder (Kural) | Rotating-tap (ATELIER baseline) |
 |---|---|---|---|
-| Formants | preserved naturally (grains keep the envelope); formant shift by resampling grains | need explicit envelope (cepstral / true envelope) | shifted with pitch (chipmunk) unless corrected |
-| Transients/consonants | good if unvoiced segments are not shifted | smeared (phasiness) without phase locking/transient handling | good |
-| Latency | ~2 pitch periods look-ahead (≈33 ms at 60 Hz, ≈10 ms at 200 Hz) | FFT size: 1024–2048 at 48 kHz (21–43 ms) | window size |
-| CPU per voice | very low (overlap-add) | high (FFT per voice; envelope shared) | low |
-| Weakness | needs good pitch marks; fails on noisy/polyphonic input | phasiness at large shifts | formants |
+| Principle | pitch-synchronous two-period grains re-spaced by period/ratio | Laroche–Dolson peak shifting with identity phase locking, cepstral envelope | two cross-faded delay taps, delay ramps at (1 − ratio) over a 50 ms grain |
+| Formants | kept (grains keep the envelope); shifted by resampling grains | kept by envelope rescaling; shifted by reading the envelope at k/ratio | move with the pitch |
+| Consonants | passed unshifted at the voice's consonant level | frames marked unvoiced pass unshifted at that level | shifted like everything else |
+| Shared analysis | detector + pitch marks | detector + one forward FFT, envelope, peaks | none |
+| Per-voice work | overlap-add of grains | peak moves + one inverse FFT per hop | two interpolated taps |
+| Latency | 2 periods of 65 Hz + 16 samples = 31.1 ms at 48 kHz | FFT size: 2048 at 44.1/48 kHz = 42.7 ms | ~W/2 = 25 ms (not reported by ATELIER) |
+| CPU, 1 / 16 voices (incl. analysis) | 1.8 % / 5.5 % of one core | 2.6 % / 7.0 % | – |
 
-Plan:
-1. **Primary engine: TD-PSOLA** on voiced frames, using the shared analysis to place pitch marks
-   (epochs, refined to waveform peaks in each period). Each voice resynthesises at its own target
-   period from the same analysis grains: per-voice cost is only the overlap-add.
-2. **Unvoiced material (consonants, breaths) is not pitch-shifted** for harmony voices: it is either
-   passed at reduced level or omitted per voice (user choice), which avoids duplicated, exaggerated
-   consonants across 16 voices.
-3. **High Quality mode:** phase vocoder with identity phase locking and the spectral envelope
-   estimated once (shared), re-applied per voice. Benchmarked against PSOLA on real vocals; kept
-   only if it sounds better for large intervals.
-4. **Low Latency mode:** PSOLA with a raised pitch floor (shorter look-ahead) for tracking.
+**TD-PSOLA in detail.**
+- *Pitch marks (shared).* Marks are placed one period apart, the period coming from the latest
+  detector frame. Each new mark is aligned with the previous one by maximising the normalised
+  correlation of the period before each mark (search ±15 % of a period, coarse on a stride of
+  fs/24 kHz, then fine). The best correlation doubles as an instant voicing measure: two consecutive
+  periods that correlate below 0.55 are unvoiced, whatever the detector said ~20 ms ago. In unvoiced
+  material marks are 10 ms apart.
+- *Voices.* Each voice keeps a synthesis time `ts` on the input time axis. Whenever a grain's left
+  edge reaches the output position, the latest mark at or before `ts` is taken, a Hann grain of ±1
+  period around it is overlap-added around `ts` (cubic interpolation, so `ts` can be fractional), and
+  `ts` advances by period / ratio. Only marks with a full period of input after them are used, so
+  no grain ever reads input that has not arrived (constant latency 2 × longest period).
+- *Formant shift* resamples the grain (output length 2P / formant ratio), independent of the pitch.
+- *Unvoiced grains* go to a separate accumulator at the consonant level and are never shifted, so
+  16 voices do not stack 16 shifted copies of every "s".
+- *Level.* Overlapping grains interfere differently for every waveform and interval (measured:
+  −0.4 to −7 dB with a fixed 1/√ratio law), so the voiced part is level-matched to the input:
+  power of shifted output vs. input at the same time, 40 ms averages, gain glides over 60 ms, only
+  while voiced. Result: within ±0.4 dB from −12 to +12 st.
+- *Ratio.* From the harmony planner (§3): it changes only when the harmony note changes and glides
+  (default 30 ms); between changes the voice follows the lead's own vibrato at a constant interval.
 
-Before choosing, both engines are prototyped offline and compared on the real-vocal set (intervals
-−12…+12, sustained vs. melismatic, breathy), listening plus objective checks (pitch accuracy of the
-output via the detector, spectral-envelope distance for formant preservation, CPU per voice).
-Plain resampling is not used as a shifting method.
+**Measured on synthetic sung vowels (`KuralDspTests`, all pass):** unshifted reconstruction 69 dB
+SNR (98/220/523 Hz); −12…+12 st on 110/220/440 Hz: median error ≤ 0.45 cents, 0 gross errors,
+level within 0.42 dB; +4 st on a vibrato line with a glide: median 4.8 c; first formant kept within
+4 % for ±7 st, moved ×1.31/×0.72 for a ±5 st formant shift (expected ×1.335/×0.749); consonant
+noise at exactly the set level; identical output for block sizes 1 and 4096. Phase vocoder: 88 dB
+unshifted, ≤ 0.36 c median error.
 
-## 3. Harmony generation — Designed (Phase 3/7)
+**Real-vocal comparison:** see §2a (filled in from `tools/eval/eval_shift.py`).
 
-- Pitch classes 0–11 with key root 0–11; scales as interval sets: major, natural/harmonic/melodic
-  minor, major/minor pentatonic, blues, chromatic, custom (12-bit mask).
-- **Diatonic intervals** are computed in scale degrees, not semitones: the detected pitch is snapped
-  to the nearest scale degree (with hysteresis so vibrato does not flip degrees), the voice's
-  interval (e.g. a third = +2 degrees) gives the target degree, converted back to a pitch class and
-  octave. The singer's deviation from the snapped note (vibrato, slides, expression) is added back so
-  harmonies follow the performance instead of being quantised.
-- A note *between* scale degrees (chromatic passing tone) keeps the interval of the nearest degree.
-- **Chord-aware mode:** each voice targets the nearest chord tone above/below; chords from a
-  user-defined progression (bar/beat via host transport) or from MIDI.
-- **MIDI mode:** held notes become voice targets directly (lowest note → voice 1 …); chords allocate
-  voices to notes. Note changes glide over a short, settable time.
-- Target changes are smoothed on note boundaries only (portamento), never within a held note.
+**Known limitations:** below 65 Hz grains are clamped (artifacts on very low bass notes); a second
+voice in the input (bleed, doubles) breaks pitch marking; unison voices (ratio 1) sit up to one
+period after the dry signal and comb against it unless detuned or delayed (Phase 5 naturalisation).
 
-## 4. Formant processing — Designed (Phase 3/5)
+## 3. Harmony generation — Implemented (scales, diatonic intervals); chords and MIDI in Phase 7
 
-- Preservation comes with PSOLA. Per-voice formant shift (±12 semitones) by resampling each grain by
-  a factor independent of the pitch ratio.
-- In the phase-vocoder path: spectral envelope by cepstral smoothing (true-envelope iteration if
-  quality needs it), computed once per frame, shared.
-- Defaults per register: voices more than ~5 semitones above the lead get a small upward formant
-  correction (−20…−40 % of the pitch shift) so they do not sound like a sped-up lead; lower voices
-  a matching downward one. All adjustable.
+`Source/DSP/Harmony.*`, tested in `Tests/HarmonyTests.cpp` (expected notes written out by hand).
+- Scales: major, natural/harmonic/melodic minor, major/minor pentatonic, blues, chromatic, custom
+  (12-bit mask, root always included). Degrees count every scale note from the root.
+- Intervals in scale steps (a third = 2 steps: major or minor as the key requires) or fixed
+  semitones, plus octaves and cents.
+- The singer's expression is kept: target = harmony note + (lead − lead's scale note), so the shift
+  is constant while the lead holds a note, through vibrato and scoops.
+- **Note decisions** (which scale note the lead is on), found necessary by a failing test (wide
+  vibrato flipped the harmony 19× in 3 s with simple hysteresis):
+  - *arrival*: the lead within 25 cents of a scale note for 25 ms → follow (steps/leaps: 25 ms);
+  - *centre*: a 100 ms smoothed lead crossing the midpoint by more than 30 cents → follow (catches
+    slow slides; vibrato up to ±65 c centred between two notes never triggers it);
+  - the first note of a phrase (after 300 ms of silence) is taken at once.
+- A chromatic passing note keeps the interval of the scale note it is nearest to (parallel motion).
+
+## 4. Formant processing — Implemented in PSOLA (§2); per-register defaults in Phase 5
+
+Formants are preserved by construction (grains); the per-voice formant control (±12 st) resamples
+grains. Planned for Phase 5: defaults that lean high voices slightly brighter/smaller and low voices
+darker, as a starting point the user can change.
 
 ## 5. Naturalisation — Designed (Phase 5)
 
@@ -164,9 +182,11 @@ variation. Admission criteria: measurable improvement over the DSP path on the r
 licence compatible with a commercial product, CPU/latency benchmarked, DSP fallback always present.
 Nothing AI-related is implemented or claimed now.
 
-## 8. Quality modes and latency — Designed
+## 8. Quality modes and latency — Designed (current build: one mode, 31 ms at 48 kHz)
 
 Low Latency / Balanced / High Quality will differ in shifting engine, look-ahead and analysis
 settings; each mode's latency is measured and reported to the host exactly, and the dry path is
-delayed by the same amount so dry and wet stay aligned. Current build: latency 0 (nothing delays
-the audio; analysis runs alongside).
+delayed by the same amount so dry and wet stay aligned. Current build: one mode, PSOLA with a 65 Hz
+floor: 1493 samples at 48 kHz (31.1 ms), reported to the host and applied to the dry path; it does
+not change when harmonies are switched off or bypassed. A Low Latency mode with a 100 Hz floor
+would be ~21 ms (low male voices would then use clamped grains).

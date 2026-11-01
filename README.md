@@ -3,14 +3,16 @@
 A vocal harmonizer for Windows (VST3, 64-bit): one recorded vocal in, the original plus up to 16
 harmony voices out. *Kural* (குரல்) is Tamil for "voice".
 
-## Status: early development (v0.1.0)
+## Status: early development (v0.2.0)
 
 | Works now | Not built yet |
 |---|---|
-| Live pitch tracking of the incoming vocal (YIN-based, tested to < 0.4 cent median on synthetic signals) | Harmony voices, pitch shifting, formants |
-| Pitch display: the voice drawn as a flowing line on a note grid, from real analysis only | Key/scale/chord logic, MIDI control |
-| Output level, click-free bypass, state saved with the project | Presets, quality modes |
-| Windows installer + portable zip, built and tested by CI | Optional AI features |
+| Live pitch tracking of the lead vocal (YIN-based, measured on real singing: see VALIDATION.md) | Voices 5–16 in the interface (the engine already runs 16) |
+| 4 harmony voices: scale-aware intervals in 8 scale types, octave, fine, formant, level, pan | Chord-aware harmony and MIDI control |
+| TD-PSOLA pitch shifting with formant preservation; consonants kept unshifted | Presets, quality modes, naturalisation (timing/detune variation) |
+| Pitch screen with the lead and every harmony line, from real engine data | Optional AI features |
+| Dry/harmony/consonant levels, glide, bypass, state saved; 31 ms latency reported to the host | Per-voice EQ/compression/effects |
+| Windows installer + portable zip, built and tested by CI | |
 
 Details: [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) · [ARCHITECTURE.md](ARCHITECTURE.md) ·
 [DSP_DESIGN.md](DSP_DESIGN.md) · [VALIDATION.md](VALIDATION.md) · [TODO.md](TODO.md) ·

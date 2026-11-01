@@ -53,6 +53,8 @@ public:
 
     // the latest mark at or before `t`; returns false if none is kept
     bool markAtOrBefore (double t, AnalysisMark& out) const noexcept;
+    // the mark that follows the one at `pos`, if it is already placed
+    bool markAfter (std::int64_t pos, AnalysisMark& out) const noexcept;
 
 private:
     void advance() noexcept;
