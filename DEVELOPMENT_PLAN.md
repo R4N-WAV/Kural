@@ -17,14 +17,14 @@ correction, effects, presets, redesign.
 | 1. Research and foundation | Stable, recognisable Kural VST3 foundation | **Done; Windows CI green (build, tests, pluginval 10, installer); DAW check pending (manual)** |
 | 2. Core pitch engine | Reliable vocal analysis | **Done: 96.4 % within 50 c on 40 solo singers (DSP_DESIGN §1)** |
 | 3. First harmony engine | Harmonizer with a few high-quality voices | **In progress (v0.2): 4 voices working in the plugin; listening review by the owner pending** |
-| 3b. Pitch correction and lead processing | Tune (retune, vibrato kept, humanize, flex-tune), lead pitch and formant | **Done in DSP and parameters (v3); interface controls with the redesign; listening pending** |
+| 3b. Pitch correction and lead processing | Tune (retune, vibrato kept, humanize, flex-tune), lead pitch and formant | **Done (v3), in the interface; listening pending** |
 | 4. Expand to 16 voices | Working 16-voice engine, CPU benchmarked | Planned |
-| 5. Naturalness and voice differentiation | Convincing layered stacks | Planned |
-| 6. Creative processing | Transform modules (Duet, Vocoder, Mutate/ring mod, Tube), Pitch & Throat pad, per-voice processing, stereo | Planned |
-| 6b. Preset library | Factory presets in the spirit of Auto-Tune EFX, browser, versioned format | Planned |
+| 5. Naturalness and voice differentiation | Convincing layered stacks | **In progress: per-voice drift and timing ("Naturalness") done** |
+| 6. Creative processing | Transform modules (Duet, Vocoder, Mutate/ring mod, Tube), Pitch & Throat pad, per-voice processing, stereo | **In progress (v4): EQ, compressor, tube, Mutate, delay, reverb, width, Duet, Pitch & Throat pad done; vocoder and per-voice effects remain** |
+| 6b. Preset library | Factory presets in the spirit of Auto-Tune EFX, browser, versioned format | **Done: 31 factory presets, user presets, A/B** |
 | 7. Musical and MIDI integration | Chord-aware harmony, MIDI notes/chords, automation | Planned |
 | 8. Optional AI | Local, optional, genuinely useful AI features | Research later; never blocks the core |
-| 9. Interface refinement | Polished commercial UI, logo, Tamil verified in hosts | Planned (foundation exists) |
+| 9. Interface refinement | Polished commercial UI, logo, Tamil verified in hosts | **In progress: direction A2 "Shallows" built; refinement and host checks remain** |
 | 10. Validation and release | Installable, validated release | Pipeline exists; release criteria in VALIDATION.md |
 
 ## Phase 1 – what exists

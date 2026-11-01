@@ -232,7 +232,19 @@ int main (int argc, char** argv)
         HarmonyEngineParams ep;
         ep.scale = Scale::make (std::atoi (argv[2]), (ScaleType) std::clamp (std::atoi (argv[3]), 0, 7));
         ep.harmonyGain = std::pow (10.0f, -3.0f / 20.0f);
+        if (const char* v = std::getenv ("KURAL_NATURAL")) ep.naturalness = (float) std::atof (v);   // 0 … 1
         e.setParams (ep);
+        if (const char* v = std::getenv ("KURAL_DUET")) e.setDuet ({ true, 0.7f, (float) std::atof (v) });   // spread 0 … 1
+        LeadParams lp;
+        if (const char* v = std::getenv ("KURAL_TUNE"))                                                 // natural | hard
+        {
+            lp.tune.on = true;
+            lp.tune.scale = ep.scale;
+            const bool hard = std::string (v) == "hard";
+            lp.tune.retuneMs = hard ? 0.0f : 25.0f;
+            lp.tune.vibrato = hard ? 0.0f : 1.0f;
+        }
+        e.setLead (lp);
         std::vector<std::pair<int, float>> vs;
         for (int a = 6; a < argc; ++a)
         {
@@ -241,6 +253,7 @@ int main (int argc, char** argv)
             vs.push_back ({ std::atoi (spec.substr (0, c).c_str()), c == std::string::npos ? 0.0f : (float) std::atof (spec.substr (c + 1).c_str()) });
         }
         if (vs.empty()) vs = { { 2, -0.35f }, { -2, 0.35f } };
+        if (vs.size() == 1 && vs[0].first == 99) vs.clear();         // "99" = no harmony voices (lead / duet only)
         for (size_t v = 0; v < vs.size() && v < (size_t) HarmonyEngine::maxVoices; ++v)
         {
             HarmonyVoiceParams p;
@@ -250,12 +263,12 @@ int main (int argc, char** argv)
             e.setVoice ((int) v, p);
         }
         const int lat = e.latency();
-        std::vector<float> L (in.mono.size(), 0.0f), R (in.mono.size(), 0.0f);
-        e.process (in.mono.data(), L.data(), R.data(), nullptr, (int) in.mono.size(), [] (const PitchFrame&, const HarmonyEngine&) {});
+        std::vector<float> L (in.mono.size(), 0.0f), R (in.mono.size(), 0.0f), lead (in.mono.size(), 0.0f);
+        e.process (in.mono.data(), L.data(), R.data(), lead.data(), (int) in.mono.size(), [] (const PitchFrame&, const HarmonyEngine&) {});
         std::vector<float> st (in.mono.size() * 2);
         for (size_t i = 0; i < in.mono.size(); ++i)
         {
-            const float dry = i >= (size_t) lat ? in.mono[i - (size_t) lat] : 0.0f;
+            const float dry = lp.active() ? lead[i] : i >= (size_t) lat ? in.mono[i - (size_t) lat] : 0.0f;
             st[2 * i] = dry + L[i];
             st[2 * i + 1] = dry + R[i];
         }

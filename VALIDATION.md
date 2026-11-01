@@ -13,7 +13,7 @@ Only results that were actually run are recorded here. "Pending" means not yet d
 
 ## Automated results (Linux, 1 Nov 2026, version 0.2.0)
 
-- `KuralDspTests`: **66/66 pass** – pitch detection (30), harmony planning (16), pitch shifting (8), pitch correction (12).
+- `KuralDspTests`: **72/72 pass** – pitch detection (30), harmony planning (16), pitch shifting (8), pitch correction (12), effects (6).
   Figures in DSP_DESIGN.md §1–§3.
 - `KuralStress` (full): **92/92 pass**, with the harmony engine running (default: two voices):
   - 44.1, 48, 88.2, 96, 176.4, 192 kHz × blocks of 1, 64, 512, 4096 (random sizes up to 2× the announced size) × layouts 1→1, 1→2, 2→2: finite output, **0 allocations/frees on the audio thread**, pitch frames produced.
@@ -22,6 +22,10 @@ Only results that were actually run are recorded here. "Pending" means not yet d
   - Bypass parameter, and harmonies off at 0 dB: exactly the input delayed by the reported latency (1493 samples at 48 kHz), bit for bit. Host bypass: crossfade without a jump, then the delayed input bit-exact.
   - **Harmony note:** a sung C4, voice 1 a third above, dry off → 329.7 Hz (E4, expected 329.6) in C major and 311.2 Hz (E♭4, expected 311.1) in C minor.
   - −6 dB measured as ×0.5012; mono in on stereo out reaches both channels; state round trip, version, older-state defaults, garbage state; re-prepare at changing rates/blocks; editor created/resized/destroyed 5×.
+- `KuralStress` additions (all pass): tune on and lead pitch automated; every effect on and automated
+  at 44.1 and 96 kHz (no allocation, peak < 0.8); every factory preset loads as defined and plays
+  without allocation; user preset save/load; A/B. A static check keeps the processor < 256 KB (a
+  560 KB processor crashed the Windows test at start: 1 MB thread stacks).
 - `KuralSnapshot`: editor rendered with the default voices on a synthetic phrase: the voice lines sit a
   scale-correct third above and below the lead (G→B/E, A→C/F, B→D/G, D→F/B); Tamil logo shaped correctly.
 - **CPU** (`KuralLab bench`, 20 s sung line at 48 kHz, one Xeon server core, Release build, analysis included):

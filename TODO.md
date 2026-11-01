@@ -29,11 +29,17 @@
 - [x] Pitch correction (natural and hard), lead transpose and formant, harmonies follow the corrected lead (v3 parameters)
 - [x] Three ocean interface directions as mockups (Design canvas "Kural Interface Directions")
 - [x] Owner picked direction A (Shallows): build it as a plugin window, no green/orange, logo = குரல் + "by R4N" only (round 2 board A2 on the canvas)
-- [ ] Owner: confirm A2; listen to the updated page (new vs before)
-- [ ] Interface controls for tune / lead (with the chosen redesign)
-- [ ] Transform modules: Duet, Vocoder, Mutate (ring mod), Tube; Pitch & Throat pad
-- [ ] Preset library (format, browser, factory set)
-- [ ] Naturalisation: add back breath/turbulence on upward shifts (PSOLA leaves ~4 dB less than the singer had), per-voice drift and timing
+- [x] Owner confirmed A2; feedback round 3 (stutter at 0:02, robotic artefacts, keep building the whole product)
+- [x] Stutter/pops at 0:02 (vocadito 2): cause found (grain-centre cancellation), fixed per voice; dropout and click measures added
+- [x] LP-PSOLA tried for downward shifts: worse on real singers, dropped (DSP_DESIGN §2)
+- [x] A2 interface in the plugin: presets, A/B, key/scale, meters, pitch well (lead as heard / as sung / voices), Tune, Harmony and Effects pages, Pitch & Throat pad, Duet, status bar
+- [x] Effects: EQ, compressor, tube, Mutate, delay (sync), reverb, width; Duet; Naturalness (drift + timing)
+- [x] Presets: 31 factory, user presets (versioned files), A/B
+- [ ] Owner: listen to round 3 (listening page) and try the build in a DAW
+- [ ] Downward shifts: the buzzy gap between pulses (clicks measure 56/min at −7 st vs 14 for a resampler) — next candidates: adaptive grain width with ghost control, pulse-shaped fill
+- [ ] Naturalisation: breath re-injection on upward shifts, formant/gain variation
+- [ ] Vocoder; per-voice effects; voices 5–16 in the interface; MIDI-controlled harmony (Phase 7)
+- [ ] Pitch-tracking sensitivity and quality (latency) modes as controls
 - [ ] Tune on fast runs: the first frames of a note reached by a slide can pick the neighbouring note
 
 ## Remaining (Phase 3 wrap-up, then Phase 4)
@@ -54,6 +60,5 @@
 - Linux test builds need `CXXFLAGS="-DJUCE_USE_XRANDR=0 -DJUCE_USE_XINERAMA=0 -DJUCE_USE_XCURSOR=0 -DJUCE_USE_XRENDER=0 -DJUCE_USE_XSHM=0"` at configure time when the X11 extension headers are missing (JUCE's helper tool is built without the project's definitions).
 - Installer is not code-signed (SmartScreen warning on first run).
 - MIDI input is accepted and ignored until Phase 7.
-- Tune, lead pitch and lead formant are host parameters only; their on-screen controls come with the redesign.
 - Latency is 31 ms at 48 kHz (2 periods of 65 Hz); no low-latency mode yet.
 - Notes below ~65 Hz are shifted with clamped grains (artifacts on very low bass notes).

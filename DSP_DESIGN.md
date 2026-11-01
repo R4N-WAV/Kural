@@ -204,6 +204,37 @@ periods around each synthesis point: −36.4 dB overall, +12 st −34.0 → −4
   over-clean. That is a plausible part of "robotic" and a target for naturalisation (§5): add back
   aperiodic energy shaped like the input's, without pitch.
 
+**Stutter on a high female voice (owner's report: vocadito 2, +4 st, ~0:02; PSOLA only).** Traced to
+grain-centre placement: the output's low harmonics are built from the leakage of the input's nearest
+harmonics through the two-period Hann window, and whether they add or cancel depends on where in the
+period grains are centred and on the interval. Correlation keeps marks at the same point of every
+period, but which point is set by where the voiced run started. On that note the shifted voice fell
+20 dB below the input for ~50 ms, and the 60 ms level matcher then overshot (+7 dB) — the stutter and
+pops. The phase vocoder and the tap shifter do not window around pitch marks, hence no such dip.
+Fix: each voice tries 8 points of the period at the start of every voiced run (and when its interval
+changes by > ½ st) and keeps the one whose first six output harmonics follow the input's envelope
+most closely; it holds that point for the run. Deep dips on that clip 17 → 1; across 25 singers ×
+8 intervals neutral (dropouts 1.16 → 1.24 %, on pitch 96.8 → 96.7 %), i.e. it removes the failure
+without costing elsewhere. Tried and dropped on the way: centring on the waveform's peak (lost 2.7 dB
+on a 440 Hz "a" at +7), "strongest low harmonics" (pulled formants down), following the peak from
+mark to mark (pitch error 2.5 → 4.6 c).
+
+**New measures (`eval_shift.py`):** *dropouts* (voiced frames where the output falls > 6 dB below the
+input, track median removed) and *clicks* (1 ms bursts in the output's second difference the input
+does not have). On 25 singers: dropouts PSOLA 0.2–1 % at ±3…7 st (phase vocoder 1.3–2.6 %, tap
+1.1–1.8 %); clicks PSOLA 11–56 /min, rising on downward shifts (phase vocoder 0.1–0.6, tap 13–25).
+The downward-shift count includes the sharp glottal pulses of a lowered voice, which the measure
+cannot tell from clicks (waveforms at the flagged points look clean), but part of it is real: when
+shifting down, grains are spaced wider than they are long and the waveform between pulses falls to
+~30 %, a buzzy edge a real voice does not have.
+
+**LP-PSOLA tried and dropped.** Splitting the voice into excitation and vocal tract (linear prediction,
+order 24, lattice filters) and moving only the excitation fills the gap between pulses with the vocal
+tract's own ringing, the textbook fix for the above. On real singers it was worse: clicks 75/min at
+−7 st (PSOLA 56), dropouts 1.4–4 % (PSOLA 0.2–1 %), and wherever the filter and the moved excitation
+did not match exactly (note onsets, where the model changes fast) the output burst (peaks to +20 dB;
+reduced but not removed by filtering with the content's source-time model). Not in the code.
+
 **Choice:** TD-PSOLA for the plugin — best formant preservation, exact level, lowest latency of the
 formant-preserving candidates, lowest CPU per voice of the two. The phase vocoder is kept in the code
 for further comparison but not used. The listening test is the final judge (VALIDATION.md).
@@ -235,7 +266,15 @@ Formants are preserved by construction (grains); the per-voice formant control (
 grains. Planned for Phase 5: defaults that lean high voices slightly brighter/smaller and low voices
 darker, as a starting point the user can change.
 
-## 5. Naturalisation — Designed (Phase 5)
+## 5. Naturalisation — Implemented in part (drift and timing); the rest designed (Phase 5)
+
+Implemented (v4, "Naturalness", default 30 %): each harmony voice has deterministic per-voice random
+walks (new target every 0.4–1.2 s, eased over 0.5 s) for pitch drift (up to ±9 c × amount) and timing
+(5–25 ms × amount, a fractional delay line per voice that glides, never jumps). Duet uses the same
+machinery with its own seed. Still to do: formant and gain variation, breath re-injection on upward
+shifts (PSOLA leaves ~4 dB less aperiodic energy than the singer had).
+
+Original design:
 
 Per voice, deterministic (seeded) slow random walks — band-limited noise, not periodic LFOs — for:
 pitch drift (±3–8 c), onset timing (0–40 ms, applied at note onsets via a per-voice delay line, not
@@ -245,7 +284,19 @@ amounts override. Seeds are fixed per voice so renders are repeatable and preset
 every time. Limitation, stated plainly: transforming one performance cannot recreate 16 independent
 performances; these cues create the impression of several singers, not new performances.
 
-## 6. Creative modes — Designed (Phase 6)
+## 6. Effects — Implemented (v4); creative modes designed (Phase 6)
+
+`Source/DSP/Fx.*`, tested in `Tests/FxTests.cpp`. After lead + harmonies, in this order: EQ (24 dB/oct
+low cut, presence peak 3.2 kHz, air shelf 10 kHz; bypassed exactly when neutral), RMS compressor (one
+"amount": threshold −12…−30 dB, ratio 1…6, soft knee, make-up), tube (asymmetric tanh, 2× oversampling
+with 8th-order Butterworth filters, aliasing of a 9 kHz tone −46 dB), Mutate (ring modulation by a sine
+at a multiple of the lead's detected pitch), delay (stereo or ping-pong, tempo sync, filtered
+feedback, time glides), reverb (8-line Householder FDN, 4 diffusers, modulated lines, damping,
+pre-delay; T60 measured 2.0 s for the 2.3 s setting), width (mid/side). Duet: a second PSOLA voice on
+the corrected lead with its own drift, 12–37 ms timing and a slight formant offset.
+Not yet: vocoder, per-voice effects.
+
+Creative modes, original design:
 
 Each mode is a set of real engine settings (not a label): Natural (preserve formants, light
 naturalisation), Tight (no timing offset, minimal drift), Wide (spread pan/width, moderate
