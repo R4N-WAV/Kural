@@ -78,6 +78,14 @@ def main():
     os.makedirs(os.path.join(work, 'wav'), exist_ok=True)
     os.makedirs(os.path.join(work, 'frames'), exist_ok=True)
     rows = list(csv.DictReader(open(os.path.join(root, 'manifest.csv'))))
+    excl_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'excluded_tracks.txt')
+    excluded = {}
+    if os.path.exists(excl_path):
+        for line in open(excl_path):
+            if line.strip() and not line.startswith('#'):
+                tid, _, why = line.partition('#')
+                excluded[tid.strip()] = why.strip()
+    rows = [r for r in rows if r['id'] not in excluded]
     agg = defaultdict(lambda: defaultdict(float))
     errs = defaultdict(list)
     per_track = []
@@ -124,6 +132,8 @@ def main():
     for tid, s in worst:
         rv = max(s['ref_voiced'], 1)
         lines.append(f"| {tid} | {100 * s['rpa'] / rv:.1f} % | {100 * s['recall'] / rv:.1f} % | {100 * s['octave'] / rv:.1f} % |")
+    if excluded:
+        lines += ['', '## Excluded from scoring', ''] + [f'- {k}: {v}' for k, v in excluded.items()]
     text = '\n'.join(lines) + '\n'
     print(text)
     if report:

@@ -73,15 +73,21 @@ to be re-measured on real recordings.
 
 "Gross error" = more than 50 cents off.
 
-**Measured on real singing** (`tools/eval/eval_pitch.py` on the `test-vocals` branch, 48 tracks,
-160,777 reference-voiced frames; references: vocadito annotations, Dagstuhl ChoirSet manual
-larynx-microphone f0):
+**Measured on real singing** (`tools/eval/eval_pitch.py` on the `test-vocals` branch: 244 tracks;
+62 scored against a reference, 209,623 reference-voiced frames; references: vocadito annotations,
+Dagstuhl ChoirSet manual or CREPE larynx-microphone f0; 2 choir tracks excluded with the reason in
+`tools/eval/excluded_tracks.txt`):
 
 | Material | Voicing recall | Within 50 c (RPA) | Octave errors | Median error |
 |---|---|---|---|---|
 | Solo singers (vocadito, 40) | 94.8 % | 96.4 % | 0.99 % | 2.0 c |
-| Choir, headset/handheld mics (DCS quartet, 8) | 95.0 % | 91.0 % | 5.15 % | 2.1 c |
-| — soprano / alto / tenor / bass | 97.6 / 94.0 / 95.3 / 93.2 % | 98.0 / 85.0 / 89.5 / 91.6 % | 0.05 / 7.7 / 6.1 / 6.6 % | 1.2–3.0 c |
+| Choir, close mics with bleed (DCS, 22) | 94.4 % | 91.0 % | 4.15 % | 2.7 c |
+| — soprano / alto / tenor / bass | 96.9 / 92.7 / 95.3 / 93.4 % | 96.3 / 85.4 / 90.6 / 91.5 % | 0.2 / 5.8 / 5.0 / 5.1 % | 1.6–3.9 c |
+
+VocalSet (180 tracks, 20 singers, no reference): isolated octave outliers (a voiced frame more than
+6 semitones from its ±50 ms neighbours) 0.55 % overall; breathy 0.03 %, straight 0.19 %, belt 0.50 %,
+spoken 0.53 %, vibrato 0.70 %; **vocal fry 3.1 % (female 5.9 %)** — the hardest material, as expected
+for irregular glottal pulses.
 
 - Octave errors are almost all an octave *down* (two periods chosen). On the choir tracks the close
   mics also pick up the other singers: two voices a fifth apart repeat together every two periods

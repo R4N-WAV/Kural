@@ -46,7 +46,7 @@ Done:
    over WAV files (`analyse`, `shift`, `bench`, `harmonize`).
 2. Real-vocal test set: the `Fetch test vocals` workflow builds it from vocadito, Dagstuhl ChoirSet
    and VocalSet (all CC BY 4.0) into the `test-vocals` branch with a manifest and attribution
-   (48 tracks in; VocalSet and more choir singers being added).
+   (244 tracks).
 3. Three shifters built (TD-PSOLA, phase vocoder, ATELIER's rotating-tap baseline) and compared on
    synthetic and stand-in material with `tools/eval/eval_shift.py`; TD-PSOLA is used in the plugin.
    On 12 real singers PSOLA keeps formants best (2.1 dB drift vs 3.0 and 7.8) at exact level;

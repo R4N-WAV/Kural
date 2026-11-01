@@ -1,0 +1,3 @@
+# Tracks left out of reference scoring, with the reason. One id per line, reason after '#'.
+dcs_SE_Basses_Tuning01_B3   # handheld mic dominated by a neighbouring bass a fourth higher; larynx-mic reference is of B3 (steady +500 c offset)
+dcs_LI_Basses_Take01_B3     # same singer and microphone situation as above (median +468 c)

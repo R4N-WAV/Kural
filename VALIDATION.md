@@ -71,8 +71,9 @@ For each of FL Studio, Cubase, Reaper:
 
 ## Real-vocal measurements (1 Nov 2026)
 
-Test set: branch `test-vocals` (vocadito 40 solo tracks, Dagstuhl ChoirSet 8 quartet tracks with
-manual larynx-mic f0; CC BY 4.0). Pitch detector and shifter results in DSP_DESIGN.md §1 and §2.
+Test set: branch `test-vocals`, 244 tracks (vocadito 40 solo tracks; Dagstuhl ChoirSet 24 tracks
+with manual or CREPE larynx-mic f0; VocalSet 180 tracks: 20 singers × belt, breathy, fast forte, lip
+trill, messa di voce, spoken, straight, vibrato, vocal fry; all CC BY 4.0). Pitch detector and shifter results in DSP_DESIGN.md §1 and §2.
 Listening page (A/B, blind option): Kural Listening Test artifact — three singers × three shifters
 at +4 and −5 st, and full harmonies. **Owner's listening verdict: pending.**
 

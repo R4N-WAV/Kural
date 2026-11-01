@@ -20,7 +20,7 @@
 - [x] Stress test with harmonies: no allocation, bypass/harmonies-off bit-exact delayed, correct harmony notes
 
 ## Current
-- [x] Real-vocal test set (48 tracks), detector baseline and shifter comparison on it; two PSOLA flaws found and fixed
+- [x] Real-vocal test set (244 tracks), detector baseline and shifter comparison on it; two PSOLA flaws found and fixed
 - [x] Listening page (A/B, blind option) published
 - [ ] Owner: listening verdict on the page, and DAW check in FL Studio, Cubase, Reaper (VALIDATION.md)
 
@@ -35,7 +35,9 @@
 
 ## Known issues / limitations
 - Real recorded vocals not tested yet; all accuracy figures come from synthetic signals.
-- Very breathy singing (aspiration within ~10 dB of the voice): ~3–4 % of voiced frames still have octave errors on synthetic tests.
+- Very breathy singing (aspiration within ~10 dB of the voice): ~3–4 % of voiced frames still have octave errors on synthetic tests (real breathy singing in VocalSet: 0.03 %).
+- Vocal fry: 3.1 % isolated octave outliers (female 5.9 %) on VocalSet.
+- Choir close mics with other singers audible: ~4 % octave-down errors (the common period of two voices).
 - Pitch reported ~18 ms after the fact (half the analysis window); fine for display, handled by look-ahead in the harmony engine.
 - Linux test builds need `CXXFLAGS="-DJUCE_USE_XRANDR=0 -DJUCE_USE_XINERAMA=0 -DJUCE_USE_XCURSOR=0 -DJUCE_USE_XRENDER=0 -DJUCE_USE_XSHM=0"` at configure time when the X11 extension headers are missing (JUCE's helper tool is built without the project's definitions).
 - Installer is not code-signed (SmartScreen warning on first run).
