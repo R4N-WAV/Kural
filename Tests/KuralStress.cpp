@@ -316,6 +316,54 @@ int main (int argc, char** argv)
                 juce::String::formatted ("sung C4, voice 1 third above in C %s: harmony at %.1f Hz (expected %.1f)", scale == 0 ? "major" : "minor", med, expect));
     }
 
+    // 6c. pitch correction: a tone sung 40 cents sharp of C4, tune on (C major, retune 0), harmonies
+    //     off → the output is C4; and with the lead pitch automated every block (random sizes), no
+    //     allocation and finite output
+    {
+        KuralProcessor p;
+        setParam (p, kural::ids::harmonyOn, 0.0f);
+        setParam (p, kural::ids::tuneOn, 1.0f);
+        setParam (p, kural::ids::retune, 0.0f);
+        p.prepareToPlay (48000.0, 256);
+        juce::AudioBuffer<float> buf (2, 256);
+        juce::MidiBuffer midi;
+        std::vector<float> out;
+        double ph = 0.0;
+        const double f0 = 261.63 * std::pow (2.0, 40.0 / 1200.0);
+        for (int blk = 0; blk < 48000 * 2 / 256; ++blk)
+        {
+            for (int i = 0; i < 256; ++i)
+            {
+                ph += 2.0 * juce::MathConstants<double>::pi * f0 / 48000.0;
+                const float v = (float) (0.2 * (std::sin (ph) + 0.5 * std::sin (2 * ph) + 0.3 * std::sin (3 * ph)));
+                buf.setSample (0, i, v); buf.setSample (1, i, v);
+            }
+            p.processBlock (buf, midi);
+            for (int i = 0; i < 256; ++i) out.push_back (buf.getSample (0, i));
+        }
+        kural::dsp::PitchDetector det;
+        det.prepare (48000.0);
+        std::vector<float> f0s;
+        det.process (out.data(), (int) out.size(), [&] (const kural::dsp::PitchFrame& f)
+                     { if (f.voicing == kural::dsp::Voicing::voiced && f.centreSample > 48000) f0s.push_back (f.f0Hz); });
+        std::sort (f0s.begin(), f0s.end());
+        const float med = f0s.empty() ? 0.0f : f0s[f0s.size() / 2];
+        report (! f0s.empty() && std::abs (1200.0f * std::log2 (med / 261.63f)) < 5.0f,
+                juce::String::formatted ("tune on: C4 sung 40 c sharp comes out at %.2f Hz (expected 261.63)", med));
+
+        KuralProcessor q;
+        setParam (q, kural::ids::tuneOn, 1.0f);
+        q.prepareToPlay (48000.0, 512);
+        juce::Random r (11);
+        auto st = run (q, { Signal::vocal, 48000.0 }, secs, 512, true, 2, 2, [&] (int b)
+        {
+            setParam (q, kural::ids::leadPitch, -12.0f + 24.0f * r.nextFloat());
+            if (b % 23 == 0) setParam (q, kural::ids::tuneOn, (b / 23) % 2 == 0 ? 0.0f : 1.0f);
+        });
+        report (st.finite && st.allocs == 0 && st.peak < 2.0f,
+                juce::String::formatted ("tune toggled and lead pitch automated every block: finite, %ld allocs, peak %.2f", st.allocs, st.peak));
+    }
+
     // 7. state: save → restore round trip, and an older/partial state falls back to defaults
     {
         KuralProcessor a, b;

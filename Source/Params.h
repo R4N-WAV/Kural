@@ -19,6 +19,14 @@ inline constexpr auto harmonyLevel = "harmonyLevel"; // dB                      
 inline constexpr auto dryLevel = "dryLevel";       // dB                                     (v2)
 inline constexpr auto consonants = "consonants";   // level of consonants/breaths in harmonies, % (v2)
 inline constexpr auto glide = "glide";             // ms                                     (v2)
+// lead vocal: pitch correction, transpose, formant                                          (v3)
+inline constexpr auto tuneOn = "tuneOn";           // pitch correction on/off (uses key/scale)
+inline constexpr auto retune = "retune";           // retune speed, ms (0 = instant, hard tune)
+inline constexpr auto tuneVibrato = "tuneVibrato"; // % of the singer's vibrato/motion kept (100 = natural)
+inline constexpr auto humanize = "humanize";       // %, slower correction on held notes
+inline constexpr auto flexTune = "flexTune";       // %, only correct notes the singer is close to
+inline constexpr auto leadPitch = "leadPitch";     // lead transpose, semitones
+inline constexpr auto leadFormant = "leadFormant"; // lead formant shift, semitones (0 = preserved)
 
 // per voice: "v01_on" etc.
 inline constexpr const char* voiceSuffixes[] = { "on", "mode", "interval", "semis", "octave", "cents", "formant", "level", "pan" };

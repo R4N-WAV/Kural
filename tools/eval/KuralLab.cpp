@@ -7,6 +7,8 @@
 //   KuralLab bench <psola|pv> <voices> <in.wav>
 //       CPU time for N voices sharing one analysis (different intervals per voice)
 //   KuralLab harmonize <key 0-11> <scale 0-7> <in.wav> <out.wav> [interval:pan ...]
+//   KuralLab tune <key 0-11> <scale 0-7> <retune_ms> <vibrato 0-1> <humanize 0-1> <flex 0-1> <transpose> <formant> <in.wav> <out.wav>
+//       the processed lead alone (pitch correction / transpose / formant), aligned with the input
 //       the full harmony engine as the plugin runs it: dry (delayed by the latency) + voices, stereo.
 //       Voices are given as scale steps and pan, e.g. 2:-0.35 -2:0.35 (default: third above / below)
 //
@@ -248,7 +250,7 @@ int main (int argc, char** argv)
         }
         const int lat = e.latency();
         std::vector<float> L (in.mono.size(), 0.0f), R (in.mono.size(), 0.0f);
-        e.process (in.mono.data(), L.data(), R.data(), (int) in.mono.size(), [] (const PitchFrame&, const HarmonyEngine&) {});
+        e.process (in.mono.data(), L.data(), R.data(), nullptr, (int) in.mono.size(), [] (const PitchFrame&, const HarmonyEngine&) {});
         std::vector<float> st (in.mono.size() * 2);
         for (size_t i = 0; i < in.mono.size(); ++i)
         {
@@ -258,6 +260,35 @@ int main (int argc, char** argv)
         }
         if (! kural::tools::writeWavStereo (argv[5], st, fs)) return 1;
         std::printf ("latency_samples=%d voices=%zu\n", lat, vs.size());
+        return 0;
+    }
+    if (cmd == "tune" && argc >= 12)
+    {
+        Wav in;
+        if (! load (argv[10], in)) return 1;
+        const double fs = in.sampleRate;
+        HarmonyEngine e;
+        e.prepare (fs);
+        LeadParams lp;
+        lp.tune.on = true;
+        lp.tune.scale = Scale::make (std::atoi (argv[2]), (ScaleType) std::clamp (std::atoi (argv[3]), 0, 7));
+        lp.tune.retuneMs = (float) std::atof (argv[4]);
+        lp.tune.vibrato = (float) std::atof (argv[5]);
+        lp.tune.humanize = (float) std::atof (argv[6]);
+        lp.tune.flex = (float) std::atof (argv[7]);
+        lp.transposeSemis = (float) std::atof (argv[8]);
+        lp.formantSemis = (float) std::atof (argv[9]);
+        e.setLead (lp);
+        const int lat = e.latency();
+        std::vector<float> L (in.mono.size(), 0.0f), lead (in.mono.size(), 0.0f);
+        const auto t0 = std::chrono::steady_clock::now();
+        e.process (in.mono.data(), L.data(), nullptr, lead.data(), (int) in.mono.size(), [] (const PitchFrame&, const HarmonyEngine&) {});
+        const double sec = std::chrono::duration<double> (std::chrono::steady_clock::now() - t0).count();
+        // remove the latency so the output lines up with the input
+        std::vector<float> out (in.mono.size(), 0.0f);
+        for (size_t i = (size_t) lat; i < lead.size(); ++i) out[i - (size_t) lat] = lead[i];
+        if (! kural::tools::writeWav (argv[11], out, fs)) return 1;
+        std::printf ("latency_samples=%d process_s=%.4f audio_s=%.4f\n", lat, sec, (double) in.mono.size() / fs);
         return 0;
     }
     return usage();

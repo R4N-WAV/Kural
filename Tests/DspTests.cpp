@@ -4,6 +4,7 @@
 void pitchTests();
 void harmonyTests();
 void shifterTests();
+void correctionTests();
 
 int main()
 {
@@ -13,6 +14,8 @@ int main()
     harmonyTests();
     std::printf ("\n---- pitch shifting\n");
     shifterTests();
+    std::printf ("\n---- pitch correction\n");
+    correctionTests();
     using namespace kural::test;
     std::printf ("\n%d of %d checks passed\n", checks - failures, checks);
     return failures == 0 ? 0 : 1;

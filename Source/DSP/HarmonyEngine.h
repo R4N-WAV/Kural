@@ -1,14 +1,19 @@
 #pragma once
-// Kural – the harmony engine: one vocal in, up to 16 harmony voices out (stereo), no dry signal.
+// Kural – the vocal engine: one vocal in; a processed lead (tuned, transposed, formant-shifted) and
+// up to 16 harmony voices out (stereo). The dry signal is the caller's.
 //
-//   input (mono) ─► PitchDetector ─► HarmonyPlanner (key/scale, one decision for all voices)
-//                └► PitchMarker (shared analysis marks) ─► PsolaVoice × N ─► pan ─► L/R
+//   input (mono) ─► PitchDetector ─► PitchCorrector (lead: tune) + HarmonyPlanner (harmonies)
+//                └► PitchMarker (shared analysis marks) ─► lead PsolaVoice ─► lead (mono)
+//                                                       └► PsolaVoice × N ─► pan ─► L/R
 //
+// Harmonies follow the corrected lead: the lead's correction is added to every harmony's shift.
 // The analysis runs once and is shared; each voice only overlap-adds grains. Output is delayed by
 // latency() samples (constant); the caller delays the dry signal by the same amount.
 // Plain C++17: prepare() allocates, process() is real-time safe and bounded.
 #include <array>
+#include <cmath>
 #include "Harmony.h"
+#include "PitchCorrector.h"
 #include "PitchDetector.h"
 #include "Psola.h"
 
@@ -31,6 +36,14 @@ struct HarmonyEngineParams
     float harmonyGain = 1.0f;        // linear, all voices
 };
 
+struct LeadParams
+{
+    CorrectionParams tune;           // pitch correction
+    float transposeSemis = 0.0f;     // pitch shift of the lead (−24 … 24)
+    float formantSemis = 0.0f;       // formant shift of the lead ("throat"); 0 = preserved
+    bool active() const noexcept { return tune.on || std::abs (transposeSemis) > 1.0e-3f || std::abs (formantSemis) > 1.0e-3f; }
+};
+
 class HarmonyEngine
 {
 public:
@@ -42,16 +55,25 @@ public:
 
     // parameters for the next block (copied; safe to call every block)
     void setParams (const HarmonyEngineParams& p) noexcept { params = p; planner.setScale (p.scale); }
+    void setLead (const LeadParams& p) noexcept { lead = p; corrector.setParams (p.tune); }
     void setVoice (int index, const HarmonyVoiceParams& v) noexcept { if (index >= 0 && index < maxVoices) voiceParams[(size_t) index] = v; }
 
-    // mono in, harmonies added to outL/outR (which may be the caller's buffers, already holding dry)
+    // mono in, harmonies added to outL/outR (which may be the caller's buffers, already holding dry);
+    // leadOut (optional, mono) receives the processed lead, or zeros while the lead is not active
     template <typename OnFrame>
-    void process (const float* in, float* outL, float* outR, int n, OnFrame&& onFrame) noexcept
+    void process (const float* in, float* outL, float* outR, float* leadOut, int n, OnFrame&& onFrame) noexcept
     {
         for (int i = 0; i < n; ++i)
         {
             detector.process (&in[i], 1, [&] (const PitchFrame& f) { handleFrame (f); onFrame (f, *this); });
             marker.push (in[i]);
+            if (leadOut != nullptr)
+            {
+                // the lead voice runs while active and for a short tail after, so switching is smooth
+                if (lead.active()) { if (! leadRunning) { leadVoice.reset (marker); leadRunning = true; } leadIdle = 0; }
+                else if (leadRunning && ++leadIdle > marker.latency() * 2) leadRunning = false;
+                leadOut[i] = leadRunning ? leadVoice.next (marker) : 0.0f;
+            }
             float l = 0.0f, r = 0.0f;
             for (int v = 0; v < maxVoices; ++v)
             {
@@ -78,6 +100,9 @@ public:
     // state for displays (message thread may read copies of these through the caller)
     bool leadVoiced() const noexcept { return lastVoiced; }
     float leadMidi() const noexcept { return lastLead; }
+    float leadShift() const noexcept { return leadSemis; }      // correction + transpose applied to the lead
+    float leadCorrection() const noexcept { return corrector.currentShift(); }
+    bool leadActive() const noexcept { return lead.active(); }
     float voiceShift (int v) const noexcept { return state[(size_t) v].shift; }
     bool voiceActive (int v) const noexcept { return voiceParams[(size_t) v].on; }
 
@@ -88,6 +113,12 @@ private:
     PitchDetector detector;
     PitchMarker marker;
     HarmonyPlanner planner;
+    PitchCorrector corrector;
+    PsolaVoice leadVoice;
+    LeadParams lead;
+    bool leadRunning = false;
+    int leadIdle = 0;
+    float leadSemis = 0.0f;
     std::array<PsolaVoice, maxVoices> voices;
     std::array<HarmonyVoiceParams, maxVoices> voiceParams {};
     HarmonyEngineParams params;

@@ -74,14 +74,16 @@ private:
     double fs = 48000.0;
     int maxBlock = 512, latency = 0;
     kural::dsp::HarmonyEngine engine;
-    std::vector<float> mono, harmL, harmR;
+    std::vector<float> mono, harmL, harmR, leadBuf;
     std::array<std::vector<float>, 2> dryRing;
     int dryMask = 0, dryPos = 0;
-    juce::SmoothedValue<float> outGain, wetMix, dryGain;   // wetMix: 1 = processed, 0 = bypassed (crossfade)
+    juce::SmoothedValue<float> outGain, wetMix, dryGain, leadMix;   // wetMix: 1 = processed, 0 = bypassed (crossfade)
 
     // cached parameter pointers (no lookups on the audio thread)
     std::atomic<float> *pOutput = nullptr, *pBypass = nullptr, *pKey = nullptr, *pScale = nullptr, *pHarmOn = nullptr,
-                       *pHarmLevel = nullptr, *pDryLevel = nullptr, *pConsonants = nullptr, *pGlide = nullptr;
+                       *pHarmLevel = nullptr, *pDryLevel = nullptr, *pConsonants = nullptr, *pGlide = nullptr,
+                       *pTuneOn = nullptr, *pRetune = nullptr, *pTuneVibrato = nullptr, *pHumanize = nullptr,
+                       *pFlex = nullptr, *pLeadPitch = nullptr, *pLeadFormant = nullptr;
     struct VoicePtrs { std::atomic<float> *on, *mode, *interval, *semis, *octave, *cents, *formant, *level, *pan; };
     std::array<VoicePtrs, kural::registeredVoices> pVoice {};
 

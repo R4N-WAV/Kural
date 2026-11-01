@@ -66,6 +66,34 @@ juce::AudioProcessorValueTreeState::ParameterLayout kural::createParameterLayout
                                                             .withStringFromValueFunction ([] (float v, int) { return String (roundToInt (v)) + " ms"; })
                                                             .withValueFromStringFunction (num)));
 
+    // ---- v3: lead vocal (pitch correction, transpose, formant)
+    auto pct = [&] (const String& id, const String& name, float def)
+    {
+        return std::make_unique<AudioParameterFloat> (ParameterID { id, 3 }, name, NormalisableRange<float> (0.0f, 100.0f, 1.0f), def,
+                                                      AudioParameterFloatAttributes().withLabel ("%")
+                                                          .withStringFromValueFunction ([] (float v, int) { return String (roundToInt (v)) + " %"; })
+                                                          .withValueFromStringFunction (num));
+    };
+    auto semis = [&] (const String& id, const String& name, float lo, float hi)
+    {
+        return std::make_unique<AudioParameterFloat> (ParameterID { id, 3 }, name, NormalisableRange<float> (lo, hi, 0.01f), 0.0f,
+                                                      AudioParameterFloatAttributes().withLabel ("st")
+                                                          .withStringFromValueFunction ([] (float f, int)
+                                                              { const float r = std::round (f * 100.0f) / 100.0f; return (r > 0 ? "+" : "") + String (r, 2) + " st"; })
+                                                          .withValueFromStringFunction (num));
+    };
+    p.push_back (std::make_unique<AudioParameterBool> (ParameterID { ids::tuneOn, 3 }, "Tune", false));
+    p.push_back (std::make_unique<AudioParameterFloat> (ParameterID { ids::retune, 3 }, "Retune Speed",
+                                                        NormalisableRange<float> (0.0f, 400.0f, 1.0f, 0.4f), 25.0f,
+                                                        AudioParameterFloatAttributes().withLabel ("ms")
+                                                            .withStringFromValueFunction ([] (float v, int) { return String (roundToInt (v)) + " ms"; })
+                                                            .withValueFromStringFunction (num)));
+    p.push_back (pct (ids::tuneVibrato, "Vibrato Kept", 100.0f));
+    p.push_back (pct (ids::humanize, "Humanize", 0.0f));
+    p.push_back (pct (ids::flexTune, "Flex-Tune", 0.0f));
+    p.push_back (semis (ids::leadPitch, "Lead Pitch", -24.0f, 24.0f));
+    p.push_back (semis (ids::leadFormant, "Lead Formant", -12.0f, 12.0f));
+
     // ---- v2: voices 1–4
     struct Default { bool on; int interval; int octave; float pan; };
     const Default defaults[] = { { true, 8, 0, -0.35f }, { true, 4, 0, 0.35f }, { false, 10, 0, -0.6f }, { false, 6, -1, 0.6f } };

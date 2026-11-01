@@ -13,6 +13,10 @@ KuralProcessor::KuralProcessor()
     pHarmOn = raw (ids::harmonyOn);        pHarmLevel = raw (ids::harmonyLevel);
     pDryLevel = raw (ids::dryLevel);       pConsonants = raw (ids::consonants);
     pGlide = raw (ids::glide);
+    pTuneOn = raw (ids::tuneOn);           pRetune = raw (ids::retune);
+    pTuneVibrato = raw (ids::tuneVibrato); pHumanize = raw (ids::humanize);
+    pFlex = raw (ids::flexTune);           pLeadPitch = raw (ids::leadPitch);
+    pLeadFormant = raw (ids::leadFormant);
     for (int v = 0; v < registeredVoices; ++v)
         pVoice[(size_t) v] = { raw (ids::voiceId (v, "on")), raw (ids::voiceId (v, "mode")), raw (ids::voiceId (v, "interval")),
                                raw (ids::voiceId (v, "semis")), raw (ids::voiceId (v, "octave")), raw (ids::voiceId (v, "cents")),
@@ -36,6 +40,7 @@ void KuralProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     mono.assign ((size_t) maxBlock, 0.0f);
     harmL.assign ((size_t) maxBlock, 0.0f);
     harmR.assign ((size_t) maxBlock, 0.0f);
+    leadBuf.assign ((size_t) maxBlock, 0.0f);
 
     engine.prepare (fs);
     latency = engine.latency();
@@ -48,10 +53,12 @@ void KuralProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     outGain.reset (fs, 0.03);
     dryGain.reset (fs, 0.03);
     wetMix.reset (fs, 0.02);
+    leadMix.reset (fs, 0.02);
     outGain.setCurrentAndTargetValue (juce::Decibels::decibelsToGain (pOutput->load()));
     dryGain.setCurrentAndTargetValue (juce::Decibels::decibelsToGain (pDryLevel->load(), -59.9f));
     wetMix.setCurrentAndTargetValue (pBypass->load() > 0.5f ? 0.0f : 1.0f);
     readParameters();
+    leadMix.setCurrentAndTargetValue (engine.leadActive() ? 1.0f : 0.0f);
 
     fifo.reset();
     clockSec.store (0.0);
@@ -69,6 +76,16 @@ void KuralProcessor::readParameters() noexcept
     ep.glideMs = pGlide->load();
     ep.harmonyGain = pHarmOn->load() > 0.5f ? juce::Decibels::decibelsToGain (pHarmLevel->load(), -59.9f) : 0.0f;
     engine.setParams (ep);
+    LeadParams lp;
+    lp.tune.on = pTuneOn->load() > 0.5f;
+    lp.tune.scale = ep.scale;
+    lp.tune.retuneMs = pRetune->load();
+    lp.tune.vibrato = pTuneVibrato->load() * 0.01f;
+    lp.tune.humanize = pHumanize->load() * 0.01f;
+    lp.tune.flex = pFlex->load() * 0.01f;
+    lp.transposeSemis = pLeadPitch->load();
+    lp.formantSemis = pLeadFormant->load();
+    engine.setLead (lp);
     for (int v = 0; v < kural::registeredVoices; ++v)
     {
         const auto& p = pVoice[(size_t) v];
@@ -135,7 +152,7 @@ void KuralProcessor::processChunk (juce::AudioBuffer<float>& buffer, int start, 
     // ---- harmonies (stereo, delayed by the engine latency)
     std::fill (harmL.begin(), harmL.begin() + n, 0.0f);
     std::fill (harmR.begin(), harmR.begin() + n, 0.0f);
-    engine.process (m, harmL.data(), useOut > 1 ? harmR.data() : nullptr, n,
+    engine.process (m, harmL.data(), useOut > 1 ? harmR.data() : nullptr, leadBuf.data(), n,
                     [this] (const kural::dsp::PitchFrame& f, const kural::dsp::HarmonyEngine&) { pushFrame (f); });
 
     // ---- dry, delayed by the same latency; mono input feeds both sides
@@ -143,6 +160,7 @@ void KuralProcessor::processChunk (juce::AudioBuffer<float>& buffer, int start, 
     outGain.setTargetValue (juce::Decibels::decibelsToGain (pOutput->load()));
     dryGain.setTargetValue (juce::Decibels::decibelsToGain (pDryLevel->load(), -59.9f));
     wetMix.setTargetValue (bypass ? 0.0f : 1.0f);
+    leadMix.setTargetValue (engine.leadActive() ? 1.0f : 0.0f);
     for (int i = 0; i < n; ++i)
     {
         const int w = dryPos;
@@ -154,8 +172,13 @@ void KuralProcessor::processChunk (juce::AudioBuffer<float>& buffer, int start, 
         dryPos = (dryPos + 1) & dryMask;
         const float d0 = dryRing[0][(size_t) r], d1 = dryRing[1][(size_t) r];
         const float og = outGain.getNextValue(), dg = dryGain.getNextValue(), wm = wetMix.getNextValue();
-        const float p0 = (d0 * dg + harmL[(size_t) i]) * og;
-        const float p1 = (d1 * dg + harmR[(size_t) i]) * og;
+        // the lead: the dry vocal, or the processed (tuned / transposed) lead in its place (mono,
+        // centred), crossfaded when switched; both are delayed by the same latency
+        const float lm = leadMix.getNextValue();
+        const float l0 = lm <= 0.0f ? d0 : d0 + (leadBuf[(size_t) i] - d0) * lm;
+        const float l1 = lm <= 0.0f ? d1 : d1 + (leadBuf[(size_t) i] - d1) * lm;
+        const float p0 = (l0 * dg + harmL[(size_t) i]) * og;
+        const float p1 = (l1 * dg + harmR[(size_t) i]) * og;
         // bypassed: exactly the delayed input; switching crossfades so it never clicks
         const float o0 = wm >= 1.0f ? p0 : wm <= 0.0f ? d0 : d0 + (p0 - d0) * wm;
         const float o1 = wm >= 1.0f ? p1 : wm <= 0.0f ? d1 : d1 + (p1 - d1) * wm;
