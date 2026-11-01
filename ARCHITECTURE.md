@@ -6,12 +6,14 @@ how Kural fits into the existing R4N projects.
 
 ## 1. R4N ecosystem findings (inspected 1 Nov 2026)
 
+Updated 1 Nov 2026: ATELIER lives in `R4N-WAV/Sonic-Lab` (the owner pointed to it).
+
 | Repository | What it contains | Relevance to Kural |
 |---|---|---|
 | `R4N-WAV/anbu` | Complete, released plugin (optical leveler + colour stage). JUCE 8.0.8 via CMake FetchContent, C++17, static MSVC runtime, VST3 (Windows) + VST3/AU (Mac). ~5,800 lines. | The only R4N codebase with real code. Primary reference for build, packaging, CI and visual language. |
 | `R4N-WAV/Isai` | README only ("Synth VST3"). | No code or design to study yet. |
 | `R4N-WAV/isai-reference` | README only. | Nothing to study. |
-| ATELIER | Not found in any R4N repository this account can reach. | Nothing to reuse. If it exists elsewhere, point us to it. |
+| ATELIER (`R4N-WAV/Sonic-Lab`) | Private sound-design and measurement VST3 (v0.4). JUCE 8.0.9; a JUCE-free C++17 DSP core `sonic_core` (~6,200 lines: RBJ biquads, linear-phase oversampler, partitioned convolver, FFT analysis, compressors (5 models), saturation, tape/transformer/console, delay, reverb, chorus, exciter, transient, stereo, a rotating-tap pitch block), node-graph host, 130+ measured tests. | Source of proven per-voice processing blocks for Phase 6, and the baseline in the pitch-shifter comparison. |
 
 **What Anbu does well and Kural adopts (as patterns, not copied code):**
 - Build: JUCE 8.0.8 fetched by CMake, `KURAL_JUCE_DIR` for a local copy, static runtime (no VC++ redistributable), JUCE splash/telemetry off, `R4Nx` manufacturer code shared by the family.
@@ -24,6 +26,22 @@ how Kural fits into the existing R4N projects.
 - Palette: Anbu's maroon plate and gold thread become deep water (abyss → shelf → lit surface) and a **pearl** thread (the Gulf of Mannar pearl beds off the Tamil coast), with a muted cyan voice line and sea-glass accents. See `Source/UI/Theme.cpp`.
 - DSP lives in a framework-free static library (`KuralDsp`) so it can be unit-tested without JUCE and reused by offline tools. Anbu keeps DSP in headers inside the plugin.
 - Windows only (the brief targets Windows x64 VST3); no AU/Mac job.
+
+**What ATELIER offers Kural (inspected 1 Nov 2026, commit ec77714):**
+- Same conventions as Kural: JUCE-free DSP core, parameters from one spec, audio thread never
+  allocates or locks, lock-free swaps, analysis off the audio thread, honest measurement labels.
+- **Reuse candidates (Phase 6, per-voice processing):** `Biquad` (RBJ, double precision, the response
+  function uses the audio coefficients), `CompressorModule`, `SaturationModule`, `DelayModule`,
+  `ReverbModule`, `ChorusModule`, `StereoModule`, `ExciterModule`, `TransientModule`. They follow a
+  `sonic::Module` interface with `ParamSpec`s; Kural would copy the needed files (with their origin
+  commit noted) rather than link the whole library, so neither project can break the other.
+- **Not reused:** ATELIER's `PitchModule` is a rotating-tap delay shifter (two cross-faded taps over a
+  50 ms grain). It is not pitch-synchronous and moves formants with the pitch, which is exactly what a
+  vocal harmonizer must avoid; it is kept as the baseline in Kural's shifter comparison
+  (`tools/eval/KuralLab.cpp`, algorithm `tap`). Its `Analysis` FFT is a double-precision complex
+  radix-2 for offline measurement; Kural uses its own float FFT (`Source/DSP/Fft.h`).
+- Version note: ATELIER uses JUCE 8.0.9, Kural and Anbu 8.0.8. Aligning versions is only needed if
+  code that touches JUCE is shared (the candidates above are JUCE-free).
 
 **Reused verbatim:** the five OFL font files (Catamaran 600/800, Barlow Semi Condensed 500/600/700) and their licence texts. Nothing in Anbu or Isai was modified.
 

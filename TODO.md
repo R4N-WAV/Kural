@@ -1,7 +1,7 @@
 # Kural – TODO
 
 ## Completed
-- [x] Inspect R4N repositories (Anbu, Isai, isai-reference; ATELIER not found) – findings in ARCHITECTURE.md
+- [x] Inspect R4N repositories (Anbu, Isai, isai-reference, ATELIER in Sonic-Lab) – findings in ARCHITECTURE.md
 - [x] Project documents (this file, DEVELOPMENT_PLAN, ARCHITECTURE, DSP_DESIGN, VALIDATION)
 - [x] CMake/JUCE 8.0.8 project, framework-free `KuralDsp` library
 - [x] VST3 foundation: buses (mono/stereo → stereo, mono → mono), MIDI input declared, output gain, click-free bypass, zero latency, versioned state

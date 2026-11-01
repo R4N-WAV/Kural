@@ -1,0 +1,211 @@
+// KuralLab: runs Kural's real DSP code offline over WAV files, for measurements and listening tests.
+//
+//   KuralLab analyse <in.wav> <frames.csv>
+//       pitch detector frames: time_s, f0_hz, confidence, voicing (0 silence,1 unvoiced,2 uncertain,3 voiced), rms_db
+//   KuralLab shift <psola|pv|tap> <semitones> <formant_semis> <unvoiced_gain> <in.wav> <out.wav>
+//       one shifted voice (no dry signal); prints latency and processing time
+//   KuralLab bench <psola|pv> <voices> <in.wav>
+//       CPU time for N voices sharing one analysis (different intervals per voice)
+//
+// "tap" is the rotating-tap delay shifter of R4N ATELIER (Sonic-Lab, PitchModule, 50 ms grain),
+// ported here as a baseline: it is not pitch-synchronous and does not preserve formants.
+#include "DSP/PhaseVocoder.h"
+#include "DSP/PitchDetector.h"
+#include "DSP/Psola.h"
+#include "WavIO.h"
+#include <chrono>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <string>
+#include <vector>
+
+using namespace kural::dsp;
+using kural::tools::Wav;
+
+namespace
+{
+// ---- ATELIER rotating-tap shifter (Sonic-Lab core/src/modules/EffectModules.cpp, PitchModule), mono,
+// no feedback, no tone filter: two taps half a window apart, delay ramping at (1 − ratio), sin² cross-fade
+struct RotatingTap
+{
+    std::vector<float> line;
+    int w = 0;
+    double ph = 0.0, W = 0.0, ratio = 1.0;
+    void prepare (double fs, double semis, double windowMs = 50.0)
+    {
+        line.assign ((size_t) (fs * 0.32), 0.0f);
+        W = std::max (16.0, windowMs * 0.001 * fs);
+        ratio = std::pow (2.0, semis / 12.0);
+    }
+    float read (double delay) const
+    {
+        const double pos = (double) w - delay;
+        const int n = (int) line.size();
+        const double fl = std::floor (pos);
+        const int i = (int) fl;
+        const float t = (float) (pos - fl);
+        auto at = [&] (int k) { return line[(size_t) (((k % n) + n) % n)]; };
+        const float y0 = at (i - 1), y1 = at (i), y2 = at (i + 1), y3 = at (i + 2);
+        const float c1 = 0.5f * (y2 - y0), c2 = y0 - 2.5f * y1 + 2.0f * y2 - 0.5f * y3, c3 = 0.5f * (y3 - y0) + 1.5f * (y1 - y2);
+        return ((c3 * t + c2) * t + c1) * t + y1;
+    }
+    float next (float x)
+    {
+        line[(size_t) w] = x;
+        double y = 0.0;
+        for (int t = 0; t < 2; ++t)
+        {
+            double p = ph + 0.5 * t;
+            p -= std::floor (p);
+            const double s = std::sin (3.14159265358979 * p);
+            y += s * s * read (4.0 + p * W);
+        }
+        ph += (1.0 - ratio) / W;
+        ph -= std::floor (ph);
+        w = (w + 1) % (int) line.size();
+        return (float) y;
+    }
+};
+
+double secondsSince (std::chrono::steady_clock::time_point t0)
+{
+    return std::chrono::duration<double> (std::chrono::steady_clock::now() - t0).count();
+}
+
+int usage()
+{
+    std::fprintf (stderr, "usage:\n  KuralLab analyse <in.wav> <frames.csv>\n"
+                          "  KuralLab shift <psola|pv|tap> <semitones> <formant_semis> <unvoiced_gain> <in.wav> <out.wav>\n"
+                          "  KuralLab bench <psola|pv> <voices> <in.wav>\n");
+    return 2;
+}
+
+bool load (const char* path, Wav& w)
+{
+    std::string err;
+    if (! kural::tools::readWav (path, w, err)) { std::fprintf (stderr, "%s: %s\n", path, err.c_str()); return false; }
+    return true;
+}
+} // namespace
+
+int main (int argc, char** argv)
+{
+    if (argc < 2) return usage();
+    const std::string cmd = argv[1];
+
+    if (cmd == "analyse" && argc == 4)
+    {
+        Wav in;
+        if (! load (argv[2], in)) return 1;
+        PitchDetector det;
+        det.prepare (in.sampleRate);
+        FILE* f = std::fopen (argv[3], "w");
+        if (! f) return 1;
+        std::fprintf (f, "time_s,f0_hz,confidence,voicing,rms_db\n");
+        det.process (in.mono.data(), (int) in.mono.size(), [&] (const PitchFrame& fr)
+        {
+            std::fprintf (f, "%.6f,%.4f,%.4f,%d,%.2f\n", (double) fr.centreSample / in.sampleRate, fr.f0Hz, fr.confidence,
+                          (int) fr.voicing, fr.rmsDb);
+        });
+        std::fclose (f);
+        return 0;
+    }
+
+    if (cmd == "shift" && argc == 8)
+    {
+        const std::string algo = argv[2];
+        const float semis = (float) std::atof (argv[3]), formant = (float) std::atof (argv[4]), unv = (float) std::atof (argv[5]);
+        Wav in;
+        if (! load (argv[6], in)) return 1;
+        const double fs = in.sampleRate;
+        std::vector<float> out (in.mono.size(), 0.0f);
+        int latency = 0;
+        const auto t0 = std::chrono::steady_clock::now();
+        if (algo == "psola")
+        {
+            PitchDetector det; det.prepare (fs);
+            PitchMarker mk; mk.prepare (fs);
+            PsolaVoice v; v.prepare (mk);
+            v.set ({ semis, formant, unv, 0.0f });
+            v.reset (mk);
+            latency = mk.latency();
+            for (size_t i = 0; i < in.mono.size(); ++i)
+            {
+                det.process (&in.mono[i], 1, [&] (const PitchFrame& fr) { mk.onPitchFrame (fr); });
+                mk.push (in.mono[i]);
+                out[i] = v.next (mk);
+            }
+        }
+        else if (algo == "pv")
+        {
+            PitchDetector det; det.prepare (fs);
+            PvAnalysis a; a.prepare (fs);
+            PvVoice v; v.prepare (a);
+            v.set ({ semis, formant, unv });
+            latency = a.latency();
+            for (size_t i = 0; i < in.mono.size(); ++i)
+            {
+                det.process (&in.mono[i], 1, [&] (const PitchFrame& fr) { a.onPitchFrame (fr); });
+                if (a.push (in.mono[i])) v.synthesise (a);
+                out[i] = v.next();
+            }
+        }
+        else if (algo == "tap")
+        {
+            RotatingTap t;
+            t.prepare (fs, semis);
+            latency = (int) std::lround (4.0 + 0.5 * t.W);      // as ATELIER reports it
+            for (size_t i = 0; i < in.mono.size(); ++i) out[i] = t.next (in.mono[i]);
+        }
+        else return usage();
+        const double secs = secondsSince (t0);
+        if (! kural::tools::writeWav (argv[7], out, fs)) { std::fprintf (stderr, "cannot write %s\n", argv[7]); return 1; }
+        std::printf ("latency_samples=%d latency_ms=%.2f process_s=%.4f audio_s=%.3f\n", latency, 1000.0 * latency / fs, secs,
+                     (double) in.mono.size() / fs);
+        return 0;
+    }
+
+    if (cmd == "bench" && argc == 5)
+    {
+        const std::string algo = argv[2];
+        const int voices = std::max (1, std::atoi (argv[3]));
+        Wav in;
+        if (! load (argv[4], in)) return 1;
+        const double fs = in.sampleRate;
+        const float intervals[] = { 4, 7, -5, 12, -12, 3, 9, -8, 2, -3, 5, -7, 16, -9, 10, 14 };
+        double sink = 0.0;
+        const auto t0 = std::chrono::steady_clock::now();
+        if (algo == "psola")
+        {
+            PitchDetector det; det.prepare (fs);
+            PitchMarker mk; mk.prepare (fs);
+            std::vector<PsolaVoice> vs ((size_t) voices);
+            for (int k = 0; k < voices; ++k) { vs[(size_t) k].prepare (mk); vs[(size_t) k].set ({ intervals[k % 16], 0.0f, 0.3f, 30.0f }); vs[(size_t) k].reset (mk); }
+            for (size_t i = 0; i < in.mono.size(); ++i)
+            {
+                det.process (&in.mono[i], 1, [&] (const PitchFrame& fr) { mk.onPitchFrame (fr); });
+                mk.push (in.mono[i]);
+                for (auto& v : vs) sink += v.next (mk);
+            }
+        }
+        else if (algo == "pv")
+        {
+            PitchDetector det; det.prepare (fs);
+            PvAnalysis a; a.prepare (fs);
+            std::vector<PvVoice> vs ((size_t) voices);
+            for (int k = 0; k < voices; ++k) { vs[(size_t) k].prepare (a); vs[(size_t) k].set ({ intervals[k % 16], 0.0f, 0.3f }); }
+            for (size_t i = 0; i < in.mono.size(); ++i)
+            {
+                det.process (&in.mono[i], 1, [&] (const PitchFrame& fr) { a.onPitchFrame (fr); });
+                const bool ready = a.push (in.mono[i]);
+                for (auto& v : vs) { if (ready) v.synthesise (a); sink += v.next(); }
+            }
+        }
+        else return usage();
+        const double secs = secondsSince (t0), audio = (double) in.mono.size() / fs;
+        std::printf ("algo=%s voices=%d cpu_percent_one_core=%.2f (checksum %.3g)\n", algo.c_str(), voices, 100.0 * secs / audio, sink);
+        return 0;
+    }
+    return usage();
+}

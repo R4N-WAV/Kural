@@ -16,13 +16,22 @@ endif()
 # Pitch analysis (and later harmony, pitch shifting, formants) lives here with no JUCE dependency,
 # so it can be unit-tested on its own and used by offline tools.
 add_library(KuralDsp STATIC
-    Source/DSP/PitchDetector.cpp)
+    Source/DSP/PitchDetector.cpp
+    Source/DSP/Harmony.cpp
+    Source/DSP/Psola.cpp
+    Source/DSP/PhaseVocoder.cpp)
 target_include_directories(KuralDsp PUBLIC Source)
 
 option(KURAL_BUILD_TESTS "Build the DSP unit tests" ON)
 if(KURAL_BUILD_TESTS)
-    add_executable(KuralDspTests Tests/DspTests.cpp)
+    add_executable(KuralDspTests Tests/DspTests.cpp Tests/PitchTests.cpp Tests/HarmonyTests.cpp Tests/ShifterTests.cpp)
+    target_include_directories(KuralDspTests PRIVATE Tests)
     target_link_libraries(KuralDspTests PRIVATE KuralDsp)
+
+    # offline measurement tool: the real detector and shifters over WAV files (tools/eval)
+    add_executable(KuralLab tools/eval/KuralLab.cpp)
+    target_include_directories(KuralLab PRIVATE tools/eval)
+    target_link_libraries(KuralLab PRIVATE KuralDsp)
 endif()
 
 option(KURAL_DSP_ONLY "Only build the DSP core and its tests (no JUCE)" OFF)
